@@ -13,9 +13,12 @@ layout(binding = 6) uniform sampler2D displacementMap;
 #endif
 
 layout(location = 0) in vec3 vsg_Vertex;
+
+#if 0
 layout(location = 1) in vec3 vsg_Normal;
 layout(location = 2) in vec2 vsg_TexCoord0;
 layout(location = 3) in vec4 vsg_Color;
+#endif
 
 #ifdef VSG_INSTANCE_POSITIONS
 layout(location = 4) in vec3 vsg_position;
@@ -24,17 +27,20 @@ layout(location = 4) in vec3 vsg_position;
 layout(location = 0) out vec3 eyePos;
 layout(location = 1) out vec3 normalDir;
 layout(location = 2) out vec4 vertexColor;
-layout(location = 3) out vec2 texCoord0;
+// layout(location = 3) out vec2 texCoord0;
 
 layout(location = 5) out vec3 viewDir;
 layout(location = 6) out vec3 lightDir;
 
-out gl_PerVertex{ vec4 gl_Position; };
+out gl_PerVertex{
+    vec4 gl_Position;
+    float gl_PointSize;
+};
 
 void main()
 {
     vec4 vertex = vec4(vsg_Vertex, 1.0);
-    vec4 normal = vec4(vsg_Normal, 0.0);
+    //vec4 normal = vec4(vsg_Normal, 0.0);
 
 #ifdef VSG_DISPLACEMENT_MAP
     // TODO need to pass as as uniform or per instance attributes
@@ -78,13 +84,25 @@ void main()
     vec4 lpos = /*vsg_LightSource.position*/ vec4(0.0, 0.0, 1.0, 0.0);
 
     viewDir = - (pc.modelView * vertex).xyz;
+
+#if 0
     normalDir = (pc.modelView * normal).xyz;
+#else
+    normalDir = vec3(0.0, 0.0, -1.0);
+#endif
 
     if (lpos.w == 0.0)
         lightDir = lpos.xyz;
     else
         lightDir = lpos.xyz + viewDir;
 
+#if 0
     vertexColor = vsg_Color;
     texCoord0 = vsg_TexCoord0;
+#else
+    vertexColor = vec4(1.0, 1.0, 1.0, 1.0);
+    //texCoord0 = vsg_TexCoord0;
+#endif
+
+    gl_PointSize = 500.0 / abs(eyePos.z);
 }

@@ -6,12 +6,95 @@
 
 #include <iostream>
 
+class csv : public vsg::Inherit<vsg::ReaderWriter, csv>
+{
+public:
+    vsg::ref_ptr<vsg::Object> read(const vsg::Path& filename, vsg::ref_ptr<const vsg::Options> options) const;
+};
+
+vsg::ref_ptr<vsg::Object> csv::read(const vsg::Path& filename, vsg::ref_ptr<const vsg::Options> options) const
+{
+    auto ext = vsg::lowerCaseFileExtension(filename);
+    if (ext != "csv") return {};
+
+    vsg::Path filenameToUse = vsg::findFile(filename, options);
+    if (filenameToUse.empty()) return {};
+
+    std::ifstream fin(filenameToUse.c_str());
+    if (!fin) return { };
+
+    std::vector<vsg::vec3> vertices;
+    vertices.reserve(1024);
+
+    std::stringstream sstr;
+
+    std::string line;
+    vsg::vec3 vertex;
+    while(std::getline(fin, line))
+    {
+#if 1
+        sstr.str(line);
+
+        size_t i=0;
+        while(i < vertex.size() && (sstr >> vertex[i]))
+        {
+            if (sstr.peek()==',') sstr.ignore();
+            ++i;
+        }
+        if (i==vertex.size())
+        {
+            vertices.push_back(vertex);
+        }
+
+        //if (vertices.size()>20000000) break;
+
+        //std::cout<<"v = "<<vertex<<std::endl;
+#else
+        size_t after_x_pos = line.find(',');
+        size_t after_y_pos = (after_x_pos == std::string::npos) ? std::string::npos : line.find(',', after_x_pos+1);
+        size_t after_z_pos = (after_y_pos == std::string::npos) ? std::string::npos : line.find( ',', after_y_pos+1);
+
+        vsg::vec3 vertex;
+        vertex.x = std::string
+
+        if (after_x_pos != std::string::npos &&
+            after_y_pos != std::string::npos &&
+            after_z_pos != std::string::npos)
+
+        std::cout<<"x = ["<<line.substr(0, after_x_pos)<<
+                   "], y = ["<<line.substr(after_x_pos+1, after_y_pos-after_x_pos-1)<<
+                   "], z = ["<<line.substr(after_y_pos+1, after_z_pos - after_y_pos-1)<<"]"<<std::endl;
+#endif
+    }
+
+    if (vertices.empty()) return {};
+
+    auto points = vsg::vec3Array::create(vertices.size());
+    for(size_t i=0; i<vertices.size(); ++i)
+    {
+        points->set(i, vertices[i]);
+    }
+
+    std::cout<<"points = "<<points->size()<<std::endl;
+
+    return points;
+}
+
+
 int main(int argc, char** argv)
 {
     // set up defaults and read command line arguments to override them
     auto options = vsg::Options::create();
     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
     options->objectCache = vsg::ObjectCache::create();
+
+    // assign the csv parser to read point clouds.
+    options->add(csv::create());
+
+#ifdef vsgXchange_all
+    // add vsgXchange's support for reading and writing 3rd party file formats
+    options->add(vsgXchange::all::create());
+#endif
 
     auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "vsgbuilder";
@@ -65,8 +148,17 @@ int main(int argc, char** argv)
     bool quad = arguments.read("--quad");
     bool sphere = arguments.read("--sphere");
     bool heightfield = arguments.read("--hf");
+    bool sprites = arguments.read("--sprites");
 
-    if (!(box || sphere || cone || capsule || quad || cylinder || disk || heightfield))
+    vsg::Path textureFile = arguments.value(vsg::Path{}, {"-i", "--image"});
+    vsg::Path displacementFile = arguments.value(vsg::Path{}, "--dm");
+    vsg::Path pointsFile = arguments.value(vsg::Path{}, "--points");
+
+    if (!textureFile.empty()) stateInfo.image = vsg::read_cast<vsg::Data>(textureFile, options);
+    if (!displacementFile.empty()) stateInfo.displacementMap = vsg::read_cast<vsg::Data>(displacementFile, options);
+    if (!pointsFile.empty()) geomInfo.positions = vsg::read_cast<vsg::vec3Array>(pointsFile, options);
+
+    if (!(box || sphere || cone || capsule || quad || cylinder || disk || heightfield || sprites))
     {
         box = true;
         capsule  = true;
@@ -80,15 +172,8 @@ int main(int argc, char** argv)
 
     auto numVertices = arguments.value<uint32_t>(0, "-n");
 
-    vsg::Path textureFile = arguments.value(vsg::Path{}, {"-i", "--image"});
-    vsg::Path displacementFile = arguments.value(vsg::Path{}, "--dm");
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
-
-#ifdef vsgXchange_all
-    // add vsgXchange's support for reading and writing 3rd party file formats
-    options->add(vsgXchange::all::create());
-#endif
 
     auto scene = vsg::Group::create();
 
@@ -102,12 +187,31 @@ int main(int argc, char** argv)
         //geomInfo.transform = vsg::inverse(vsg::perspective(vsg::radians(60.0f), 1920.0f/1080.0f, 1.0f, 100.0f)  * vsg::translate(0.0f, 0.0f, -1.0f) * vsg::scale(1.0f, 1.0f, 2.0f));
         //geomInfo.transform = vsg::rotate(vsg::radians(0.0), 0.0, 0.0, 1.0);
 
-        if (!textureFile.empty()) stateInfo.image = vsg::read_cast<vsg::Data>(textureFile, options);
-        if (!displacementFile.empty()) stateInfo.displacementMap = vsg::read_cast<vsg::Data>(displacementFile, options);
-
         vsg::dbox bound;
 
-        if (numVertices>0)
+        if (geomInfo.positions)
+        {
+            stateInfo.instancce_positions_vec3 = false;
+            if (floatColors)
+            {
+                auto colors = vsg::vec4Array::create(geomInfo.positions->size());
+                geomInfo.colors = colors;
+                for(auto& c : *(colors))
+                {
+                    c = geomInfo.color;
+                }
+            }
+            else
+            {
+                auto colors = vsg::ubvec4Array::create(geomInfo.positions->size());
+                geomInfo.colors = colors;
+                for(auto& c : *(colors))
+                {
+                    c.set(static_cast<uint8_t>(geomInfo.color.r * 255.0), static_cast<uint8_t>(geomInfo.color.g * 255.0), static_cast<uint8_t>(geomInfo.color.b * 255.0), static_cast<uint8_t>(geomInfo.color.a * 255.0));
+                }
+            }
+        }
+        else if (numVertices>0)
         {
             stateInfo.instancce_positions_vec3 = true;
 
@@ -198,9 +302,39 @@ int main(int argc, char** argv)
             bound.add(geomInfo.position);
         }
 
+        if (sprites)
+        {
+            stateInfo.pointSprites = true;
+            scene->addChild(builder->createPoints(geomInfo, stateInfo));
+            bound.add(geomInfo.position);
+            geomInfo.position += geomInfo.dx * 1.5f;
+        }
+
+        if (geomInfo.positions)
+        {
+            double radius = vsg::length(bound.max - bound.min) * 0.5;
+
+            bound = {};
+            for(auto& v : *(geomInfo.positions))
+            {
+                bound.add(v);
+            }
+
+            std::cout<<"box.min = "<<bound.min<<", box.max = "<<bound.max<<std::endl;
+        }
+
         // update the centre and radius to account for all the shapes added so we can position the camera to see them all.
         centre = (bound.min + bound.max) * 0.5;
         radius += vsg::length(bound.max - bound.min) * 0.5;
+
+        std::cout<<"centre = "<<centre<<std::endl;
+        std::cout<<"radius = "<<radius<<std::endl;
+    }
+
+    if (scene->children.empty())
+    {
+        std::cout<<"No scene graph created."<<std::endl;
+        return 1;
     }
 
     // write out scene if required
