@@ -9,11 +9,9 @@
 // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_ClipDistance.xhtml
 // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/gl_CullDistance.xhtml
 
-
 class ReplaceState : public vsg::Inherit<vsg::Visitor, ReplaceState>
 {
 public:
-
     vsg::ref_ptr<vsg::GraphicsPipeline> graphicsPipeline;
 
     ReplaceState(vsg::ref_ptr<vsg::GraphicsPipeline> gp) :
@@ -26,7 +24,7 @@ public:
 
     void apply(vsg::StateGroup& sg) override
     {
-        for(auto& sc : sg.stateCommands) sc->accept(*this);
+        for (auto& sc : sg.stateCommands) sc->accept(*this);
 
         sg.traverse(*this);
     }
@@ -99,7 +97,7 @@ int main(int argc, char** argv)
         // set up defaults and read command line arguments to override them
         vsg::CommandLine arguments(&argc, argv);
 
-        // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO realted options to use when reading and writing files.
+        // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO related options to use when reading and writing files.
         auto options = vsg::Options::create();
         options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
         options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
@@ -164,14 +162,12 @@ int main(int argc, char** argv)
 
         if (!vertexShader || !fragmentShader)
         {
-            std::cout<<"Could not find shader files "<<vertexShaderFilename<<" and/or "<<fragmentShaderFilename<<std::endl;
-            std::cout<<"Please set VSG_FILE_PATH envrinmental variable to your vsgExamples/data directory."<<std::endl;
+            std::cout << "Could not find shader files " << vertexShaderFilename << " and/or " << fragmentShaderFilename << std::endl;
+            std::cout << "Please set VSG_FILE_PATH environmental variable to your vsgExamples/data directory." << std::endl;
             return 1;
         }
 
-
-        std::cout<<"windowTraits->swapchainPreferences.imageCount = "<<windowTraits->swapchainPreferences.imageCount<<std::endl;
-
+        std::cout << "windowTraits->swapchainPreferences.imageCount = " << windowTraits->swapchainPreferences.imageCount << std::endl;
 
         // create the viewer and assign window(s) to it
         auto viewer = vsg::Viewer::create();
@@ -193,19 +189,18 @@ int main(int argc, char** argv)
 
         // get the Window to create the Instance & PhysicalDevice for us.
         auto& availableFeatures = window->getOrCreatePhysicalDevice()->getFeatures(); // VkPhysicalDeviceFeatures
-        auto& limits = window->getOrCreatePhysicalDevice()->getProperties().limits; // VkPhysicalDeviceLimits
+        auto& limits = window->getOrCreatePhysicalDevice()->getProperties().limits;   // VkPhysicalDeviceLimits
 
-        std::cout<<"availableFeatures.samplerAnisotropy = "<<availableFeatures.samplerAnisotropy<<", limits.maxSamplerAnisotropy = "<<limits.maxSamplerAnisotropy<<std::endl;
-        std::cout<<"availableFeatures.shaderClipDistance = "<<availableFeatures.shaderClipDistance<<", limits.maxClipDistances = "<<limits.maxClipDistances<<std::endl;
-        std::cout<<"availableFeatures.shaderCullDistance = "<<availableFeatures.shaderCullDistance<<", limits.maxCullDistances = "<<limits.maxCullDistances<<std::endl;
-        std::cout<<"limits.maxCombinedClipAndCullDistances = "<<limits.maxCombinedClipAndCullDistances<<std::endl;
+        std::cout << "availableFeatures.samplerAnisotropy = " << availableFeatures.samplerAnisotropy << ", limits.maxSamplerAnisotropy = " << limits.maxSamplerAnisotropy << std::endl;
+        std::cout << "availableFeatures.shaderClipDistance = " << availableFeatures.shaderClipDistance << ", limits.maxClipDistances = " << limits.maxClipDistances << std::endl;
+        std::cout << "availableFeatures.shaderCullDistance = " << availableFeatures.shaderCullDistance << ", limits.maxCullDistances = " << limits.maxCullDistances << std::endl;
+        std::cout << "limits.maxCombinedClipAndCullDistances = " << limits.maxCombinedClipAndCullDistances << std::endl;
 
         if (!availableFeatures.samplerAnisotropy || !availableFeatures.shaderClipDistance)
         {
-            std::cout<<"Required features not supported."<<std::endl;
+            std::cout << "Required features not supported." << std::endl;
             return 1;
         }
-
 
         auto shaderStages = vsg::ShaderStages{vertexShader, fragmentShader};
 
@@ -217,13 +212,13 @@ int main(int argc, char** argv)
         auto baseTexture_descriptorSetLayout = vsg::DescriptorSetLayout::create(baseTexture_descriptorBindings);
 
         vsg::DescriptorSetLayoutBindings clipSettings_descriptorBindings{
-            { 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }, // ClipSettings uniform
+            {0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr}, // ClipSettings uniform
         };
 
         auto clipSettings_descriptorSetLayout = vsg::DescriptorSetLayout::create(clipSettings_descriptorBindings);
 
         vsg::PushConstantRanges pushConstantRanges{
-            {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls autoaatically provided by the VSG's DispatchTraversal
+            {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls automatically provided by the VSG's DispatchTraversal
         };
 
         vsg::VertexInputState::Bindings vertexBindingsDescriptions{
@@ -235,7 +230,7 @@ int main(int argc, char** argv)
         vsg::VertexInputState::Attributes vertexAttributeDescriptions{
             VkVertexInputAttributeDescription{0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0}, // vertex data
             VkVertexInputAttributeDescription{1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0}, // colour data
-            VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0}    // tex coord data
+            VkVertexInputAttributeDescription{2, 2, VK_FORMAT_R32G32_SFLOAT, 0}     // tex coord data
         };
 
         vsg::GraphicsPipelineStates pipelineStates{
@@ -253,7 +248,6 @@ int main(int argc, char** argv)
         auto replaceState = ReplaceState::create(graphicsPipeline);
         model->accept(*replaceState);
 
-
         auto worldClipSettings = vsg::vec4Array::create(1);
         worldClipSettings->set(0, vsg::vec4(0.0, 0.0, 0.0, 10.0));
 
@@ -262,30 +256,29 @@ int main(int argc, char** argv)
 
         auto device = window->getOrCreateDevice();
 
-
         vsg::ref_ptr<vsg::CopyAndReleaseBuffer> copyBufferCmd;
         vsg::ref_ptr<vsg::DescriptorBuffer> clipSettings_buffer;
-        vsg::BufferInfo bufferInfo;
+        auto bufferInfo = vsg::BufferInfo::create();
 
         if (useStagingBuffer)
         {
-            std::cout<<"Using Staging Buffer DescriptorBuffer"<<std::endl;
-            auto memoryBufferPools = vsg::MemoryBufferPools::create("Staging_MemoryBufferPool", device, vsg::BufferPreferences{});
+            std::cout << "Using Staging Buffer DescriptorBuffer" << std::endl;
+            auto memoryBufferPools = vsg::MemoryBufferPools::create("Staging_MemoryBufferPool", device);
             copyBufferCmd = vsg::CopyAndReleaseBuffer::create(memoryBufferPools);
 
             // allocate output storage buffer
             VkDeviceSize bufferSize = sizeof(vsg::vec4) * 1;
             auto buffer = vsg::createBufferAndMemory(device, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-            bufferInfo.buffer = buffer;
-            bufferInfo.offset = 0;
-            bufferInfo.range = bufferSize;
+            bufferInfo->buffer = buffer;
+            bufferInfo->offset = 0;
+            bufferInfo->range = bufferSize;
 
             clipSettings_buffer = vsg::DescriptorBuffer::create(vsg::BufferInfoList{bufferInfo}, 0, 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         }
         else
         {
-            std::cout<<"Using HOST_VISIBLE DescriptorBuffer"<<std::endl;
+            std::cout << "Using HOST_VISIBLE DescriptorBuffer" << std::endl;
             clipSettings_buffer = vsg::DescriptorBuffer::create(eyeClipSettings, 0);
         }
 
@@ -302,7 +295,6 @@ int main(int argc, char** argv)
             vsg::write(vsg_scene, outputFilename);
             return 1;
         }
-
 
         // compute the bounds of the scene graph to help position camera
         vsg::ComputeBounds computeBounds;
@@ -335,11 +327,10 @@ int main(int argc, char** argv)
         viewer->addEventHandler(interesectionHandler);
         interesectionHandler->world_ClipSetttings = worldClipSettings;
 
-        // add trackbal to control the Camera
+        // add trackball to control the Camera
         viewer->addEventHandler(vsg::Trackball::create(camera, ellipsoidModel));
 
         auto renderGraph = vsg::createRenderGraphForView(window, camera, vsg_scene);
-
 
         // set up commandGraph for rendering
         auto commandGraph = vsg::CommandGraph::create(window);
@@ -354,12 +345,11 @@ int main(int argc, char** argv)
             commandGraph->addChild(renderGraph);
         }
 
-
         viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
 
         viewer->compile();
 
-        worldClipSettings->set(0, vsg::vec4(centre.x, centre.y, centre.z, radius*0.3));
+        worldClipSettings->set(0, vsg::vec4(centre.x, centre.y, centre.z, radius * 0.3));
 
         auto startTime = std::chrono::steady_clock::now();
         double frameCount = 0.0;
@@ -374,13 +364,12 @@ int main(int argc, char** argv)
 
             viewer->update();
 
-            for(size_t i=0; i<worldClipSettings->size(); ++i)
+            for (size_t i = 0; i < worldClipSettings->size(); ++i)
             {
                 auto& world_sphere = worldClipSettings->at(i);
                 auto& eye_sphere = eyeClipSettings->at(i);
 
-                vsg::dmat4 viewMatrix;
-                camera->viewMatrix->get(viewMatrix);
+                vsg::dmat4 viewMatrix = camera->viewMatrix->transform();
 
                 vsg::dvec3 world_center(world_sphere.x, world_sphere.y, world_sphere.z);
                 vsg::dvec3 eye_center = viewMatrix * world_center;
@@ -388,14 +377,14 @@ int main(int argc, char** argv)
                 eye_sphere.set(eye_center.x, eye_center.y, eye_center.z, world_sphere.w);
             }
 
-            if (frameToWait>0 && waitTimeout>0)
+            if (frameToWait > 0 && waitTimeout > 0)
             {
                 viewer->waitForFences(frameToWait, waitTimeout);
             }
 
             if (useStagingBuffer)
             {
-                // copy data to staging buffer and isse a copy command to transfer to the GPU texture image
+                // copy data to staging buffer and issue a copy command to transfer to the GPU texture image
                 copyBufferCmd->copy(eyeClipSettings, bufferInfo);
             }
             else
@@ -408,7 +397,7 @@ int main(int argc, char** argv)
         }
 
         auto fps = frameCount / (std::chrono::duration<double, std::chrono::seconds::period>(std::chrono::steady_clock::now() - startTime).count());
-        std::cout<<"Average fps = "<<fps<<std::endl;
+        std::cout << "Average fps = " << fps << std::endl;
     }
     catch (const vsg::Exception& exception)
     {

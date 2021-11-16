@@ -9,8 +9,6 @@
 #include <iostream>
 #include <thread>
 
-#include "../../shared/AnimationPath.h"
-
 vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData, uint32_t mipmapLevelsHints)
 {
     struct ConvertToRGBA : public vsg::Visitor
@@ -79,7 +77,7 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData, ui
     auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
 
     vsg::PushConstantRanges pushConstantRanges{
-        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls autoaatically provided by the VSG's DispatchTraversal
+        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls automatically provided by the VSG's DispatchTraversal
     };
 
     vsg::VertexInputState::Bindings vertexBindingsDescriptions{
@@ -172,7 +170,7 @@ int main(int argc, char** argv)
         // set up defaults and read command line arguments to override them
         vsg::CommandLine arguments(&argc, argv);
 
-        // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO realted options to use when reading and writing files.
+        // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO related options to use when reading and writing files.
         auto options = vsg::Options::create();
         options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
         options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
@@ -314,37 +312,26 @@ int main(int argc, char** argv)
         }
         else
         {
-            std::ifstream in(pathFilename);
-            if (!in)
+            auto animationPath = vsg::read_cast<vsg::AnimationPath>(pathFilename, options);
+            if (!animationPath)
             {
-                std::cout << "AnimationPat: Could not open animation path file \"" << pathFilename << "\".\n";
+                std::cout<<"Warning: unable to read animation path : "<<pathFilename<<std::endl;
                 return 1;
             }
-
-            vsg::ref_ptr<vsg::AnimationPath> animationPath(new vsg::AnimationPath);
-            animationPath->read(in);
-
             viewer->addEventHandler(vsg::AnimationPathHandler::create(camera, animationPath, viewer->start_point()));
         }
 
-        // if required pre load specific number of PagedLOD levels.
+        // if required preload specific number of PagedLOD levels.
         if (loadLevels > 0)
         {
             vsg::LoadPagedLOD loadPagedLOD(camera, loadLevels);
-
-            if (!path.empty())
-            {
-                options->paths.insert(options->paths.begin(), path);
-            }
-
-            loadPagedLOD.options = options;
 
             auto startTime = std::chrono::steady_clock::now();
 
             vsg_scene->accept(loadPagedLOD);
 
             auto time = std::chrono::duration<float, std::chrono::milliseconds::period>(std::chrono::steady_clock::now() - startTime).count();
-            std::cout << "No. of tiles loaed " << loadPagedLOD.numTiles << " in " << time << "ms." << std::endl;
+            std::cout << "No. of tiles loaded " << loadPagedLOD.numTiles << " in " << time << "ms." << std::endl;
         }
 
         auto commandGraph = vsg::createCommandGraphForView(window, camera, vsg_scene);

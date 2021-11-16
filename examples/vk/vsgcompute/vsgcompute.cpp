@@ -40,7 +40,7 @@ int main(int argc, char** argv)
 
     vsg::Names validatedNames = vsg::validateInstancelayerNames(requestedLayers);
 
-    // get the physical device that suports the required compute queue
+    // get the physical device that supports the required compute queue
     auto instance = vsg::Instance::create(instanceExtensions, validatedNames);
     auto [physicalDevice, computeQueueFamily] = instance->getPhysicalDeviceAndQueueFamily(VK_QUEUE_COMPUTE_BIT);
     if (!physicalDevice || computeQueueFamily < 0)
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     vsg::DescriptorSetLayoutBindings descriptorBindings{{0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr}};
     auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
 
-    vsg::Descriptors descriptors{vsg::DescriptorBuffer::create(vsg::BufferInfoList{vsg::BufferInfo(buffer, 0, bufferSize)}, 0, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)};
+    vsg::Descriptors descriptors{vsg::DescriptorBuffer::create(vsg::BufferInfoList{vsg::BufferInfo::create(buffer, 0, bufferSize)}, 0, 0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER)};
     auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, descriptors);
 
     auto pipelineLayout = vsg::PipelineLayout::create(vsg::DescriptorSetLayouts{descriptorSetLayout}, vsg::PushConstantRanges{});

@@ -36,9 +36,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 // Rendergraph for rendering to image
 
-vsg::ref_ptr<vsg::RenderGraph> createOffscreenRendergraph(vsg::Device* device, vsg::Context& context, const VkExtent2D& extent,
+vsg::ref_ptr<vsg::RenderGraph> createOffscreenRendergraph(vsg::Context& context, const VkExtent2D& extent,
                                                           vsg::ImageInfo& colorImageInfo, vsg::ImageInfo& depthImageInfo)
 {
+    auto device = context.device;
+
     VkExtent3D attachmentExtent{extent.width, extent.height, 1};
     // Attachments
     // create image for color attachment
@@ -166,7 +168,7 @@ vsg::ref_ptr<vsg::RenderGraph> createOffscreenRendergraph(vsg::Device* device, v
     return rendergraph;
 }
 
-vsg::ref_ptr<vsg::Node> createPlanes(vsg::ImageInfo& colorImage)
+vsg::ref_ptr<vsg::Node> createPlanes(vsg::ref_ptr<vsg::ImageInfo> colorImage)
 {
     // set up search paths to SPIRV shaders and textures
     vsg::Paths searchPaths = vsg::getEnvPaths("VSG_FILE_PATH");
@@ -188,7 +190,7 @@ vsg::ref_ptr<vsg::Node> createPlanes(vsg::ImageInfo& colorImage)
     auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
 
     vsg::PushConstantRanges pushConstantRanges{
-        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls autoaatically provided by the VSG's DispatchTraversal
+        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls automatically provided by the VSG's DispatchTraversal
     };
 
     vsg::VertexInputState::Bindings vertexBindingsDescriptions{
@@ -395,8 +397,9 @@ int main(int argc, char** argv)
     // Framebuffer with attachments
     VkExtent2D targetExtent{512, 512};
     auto offscreenCamera = createCameraForScene(vsg_scene, targetExtent);
-    vsg::ImageInfo colorImage, depthImage;
-    auto rtt_RenderGraph = createOffscreenRendergraph(window->getOrCreateDevice(), compile.context, targetExtent, colorImage, depthImage);
+    auto colorImage = vsg::ImageInfo::create();
+    auto depthImage = vsg::ImageInfo::create();
+    auto rtt_RenderGraph = createOffscreenRendergraph(compile.context, targetExtent, *colorImage, *depthImage);
     auto rtt_view = vsg::View::create(offscreenCamera, vsg_scene);
     rtt_RenderGraph->addChild(rtt_view);
 

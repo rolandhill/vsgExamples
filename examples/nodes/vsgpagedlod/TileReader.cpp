@@ -126,21 +126,9 @@ vsg::ref_ptr<vsg::Object> TileReader::read_root(vsg::ref_ptr<const vsg::Options>
     uint32_t tileMultiplier = std::min(estimatedNumOfTilesBelow, maxNumTilesBelow) + 1;
 
     // set up the ResourceHints required to make sure the VSG preallocates enough Vulkan resources for the paged database
-    vsg::CollectDescriptorStats collectStats;
-    group->accept(collectStats);
-
-    auto resourceHints = vsg::ResourceHints::create();
-
-    resourceHints->maxSlot = collectStats.maxSlot;
-    resourceHints->numDescriptorSets = static_cast<uint32_t>(collectStats.computeNumDescriptorSets() * tileMultiplier);
-    resourceHints->descriptorPoolSizes = collectStats.computeDescriptorPoolSizes();
-
-    for (auto& poolSize : resourceHints->descriptorPoolSizes)
-    {
-        poolSize.descriptorCount = poolSize.descriptorCount * tileMultiplier;
-    }
-
-    group->setObject("ResourceHints", resourceHints);
+    vsg::CollectResourceRequirements collectRequirements;
+    group->accept(collectRequirements);
+    group->setObject("ResourceHints", collectRequirements.createResourceHints(tileMultiplier));
 
     // assign the EllipsoidModel so that the overall geometry of the database can be used as guide for clipping and navigation.
     group->setObject("EllipsoidModel", ellipsoidModel);
@@ -184,9 +172,9 @@ vsg::ref_ptr<vsg::Object> TileReader::read_subtile(uint32_t x, uint32_t y, uint3
 
     auto pathObjects = vsg::read(tiles, options);
 
-    if (pathObjects.size()==4)
+    if (pathObjects.size() == 4)
     {
-        for(auto& [tilePath, object] : pathObjects)
+        for (auto& [tilePath, object] : pathObjects)
         {
             auto& tileID = pathToTileID[tilePath];
             auto imageTile = object.cast<vsg::Data>();
@@ -229,7 +217,7 @@ vsg::ref_ptr<vsg::Object> TileReader::read_subtile(uint32_t x, uint32_t y, uint3
 
     vsg::time_point end_read = vsg::clock::now();
 
-    double time_to_read_tile =  std::chrono::duration<float, std::chrono::milliseconds::period>(end_read - start_read).count();
+    double time_to_read_tile = std::chrono::duration<float, std::chrono::milliseconds::period>(end_read - start_read).count();
 
     {
         std::scoped_lock<std::mutex> lock(statsMutex);

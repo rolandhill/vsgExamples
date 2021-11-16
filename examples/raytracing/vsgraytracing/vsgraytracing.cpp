@@ -29,10 +29,10 @@ int main(int argc, char** argv)
 
         auto options = vsg::Options::create();
         options->paths = searchPaths;
-    #ifdef vsgXchange_all
+#ifdef vsgXchange_all
         // add vsgXchange's support for reading and writing 3rd party file formats
         options->add(vsgXchange::all::create());
-    #endif
+#endif
 
         auto windowTraits = vsg::WindowTraits::create();
         windowTraits->windowTitle = "vsgraytracing";
@@ -58,8 +58,20 @@ int main(int argc, char** argv)
         windowTraits->deviceExtensionNames = {
             VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
             VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-            VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, VK_KHR_SPIRV_1_4_EXTENSION_NAME, VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME
-        };
+            VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, VK_KHR_SPIRV_1_4_EXTENSION_NAME, VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME};
+
+        // set up features
+        auto features = windowTraits->deviceFeatures = vsg::DeviceFeatures::create();
+        /*auto& deviceFeatures =*/ features->get();
+
+        auto& deviceAddressFeatures = features->get<VkPhysicalDeviceBufferDeviceAddressFeaturesEXT, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES>();
+        deviceAddressFeatures.bufferDeviceAddress = 1;
+
+        auto& rayTracingFeatures =  features->get<VkPhysicalDeviceRayTracingPipelineFeaturesKHR, VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR>();
+        rayTracingFeatures.rayTracingPipeline = 1;
+
+        auto& accelerationFeatures = features->get<VkPhysicalDeviceAccelerationStructureFeaturesKHR,VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR>();
+        accelerationFeatures.accelerationStructure = 1;
 
         auto window = vsg::Window::create(windowTraits);
         if (!window)
@@ -126,18 +138,18 @@ int main(int argc, char** argv)
             // set up vertex and index arrays
             auto vertices = vsg::vec3Array::create(
                 {{-1.0f, -1.0f, 0.0f},
-                {1.0f, -1.0f, 0.0f},
-                {0.0f, 1.0f, 0.0f}});
+                 {1.0f, -1.0f, 0.0f},
+                 {0.0f, 1.0f, 0.0f}});
 
             auto indices = vsg::uintArray::create(
                 {0, 1, 2});
 
             // create acceleration geometry
             auto accelGeometry = vsg::AccelerationGeometry::create();
-            accelGeometry->verts = vertices;
-            accelGeometry->indices = indices;
+            accelGeometry->assignVertices(vertices);
+            accelGeometry->assignIndices(indices);
 
-            // create bottom level acceleration structure using accel geom
+            // create bottom level acceleration structure using acceleration geom
             auto blas = vsg::BottomLevelAccelerationStructure::create(device);
             blas->geometries.push_back(accelGeometry);
 
@@ -188,13 +200,11 @@ int main(int argc, char** argv)
         storageImage->flags = 0;
         storageImage->sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        vsg::ImageInfo storageImageInfo{nullptr,
-                                        createImageView(compile.context, storageImage, VK_IMAGE_ASPECT_COLOR_BIT),
-                                        VK_IMAGE_LAYOUT_GENERAL};
+        auto storageImageInfo = vsg::ImageInfo::create(vsg::ref_ptr<vsg::Sampler>{}, createImageView(compile.context, storageImage, VK_IMAGE_ASPECT_COLOR_BIT), VK_IMAGE_LAYOUT_GENERAL);
 
         auto raytracingUniformValues = new RayTracingUniformValue();
-        perspective->get_inverse(raytracingUniformValues->value().projInverse);
-        lookAt->get_inverse(raytracingUniformValues->value().viewInverse);
+        raytracingUniformValues->value().projInverse = perspective->inverse();
+        raytracingUniformValues->value().viewInverse = lookAt->inverse();
 
         vsg::ref_ptr<RayTracingUniformValue> raytracingUniform(raytracingUniformValues);
 
@@ -206,7 +216,7 @@ int main(int argc, char** argv)
 
         auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
 
-        // create DescriptorSets and binding to bind our TopLevelAcceleration structure, storage image and camra matrix uniforms
+        // create DescriptorSets and binding to bind our TopLevelAcceleration structure, storage image and camera matrix uniforms
         auto accelDescriptor = vsg::DescriptorAccelerationStructure::create(vsg::AccelerationStructures{tlas}, 0, 0);
 
         auto storageImageDescriptor = vsg::DescriptorImage::create(storageImageInfo, 1, 0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
@@ -221,7 +231,7 @@ int main(int argc, char** argv)
         auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{accelDescriptor, storageImageDescriptor, raytracingUniformDescriptor});
         auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, raytracingPipeline->getPipelineLayout(), 0, vsg::DescriptorSets{descriptorSet});
 
-        // state group to bind the pipeline and descriptorset
+        // state group to bind the pipeline and descriptor set
         auto scenegraph = vsg::Commands::create();
         scenegraph->addChild(bindRayTracingPipeline);
         scenegraph->addChild(bindDescriptorSets);
@@ -247,7 +257,7 @@ int main(int argc, char** argv)
         // set up commandGraph to rendering viewport
         auto commandGraph = vsg::CommandGraph::create(window);
 
-        auto copyImageViewToWindow = vsg::CopyImageViewToWindow::create(storageImageInfo.imageView, window);
+        auto copyImageViewToWindow = vsg::CopyImageViewToWindow::create(storageImageInfo->imageView, window);
 
         commandGraph->addChild(scenegraph);
         commandGraph->addChild(copyImageViewToWindow);
@@ -265,7 +275,7 @@ int main(int argc, char** argv)
             viewer->handleEvents();
 
             //update camera matrix
-            lookAt->get_inverse(raytracingUniformValues->value().viewInverse);
+            raytracingUniformValues->value().viewInverse = lookAt->inverse();
             raytracingUniformDescriptor->copyDataListToBuffers();
 
             viewer->update();
@@ -286,5 +296,4 @@ int main(int argc, char** argv)
 
     // clean up done automatically thanks to ref_ptr<>
     return 0;
-
 }

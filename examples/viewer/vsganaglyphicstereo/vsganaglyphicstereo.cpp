@@ -26,12 +26,11 @@ namespace vsg
         virtual ~PerViewGraphicsPipelineState() {}
     };
     VSG_type_name(vsg::PerViewGraphicsPipelineState);
-}
+} // namespace vsg
 
 class ReplaceColorBlendState : public vsg::Visitor
 {
 public:
-
     std::set<vsg::GraphicsPipeline*> visited;
 
     void apply(vsg::Node& node) override
@@ -41,7 +40,7 @@ public:
 
     void apply(vsg::StateGroup& sg) override
     {
-        for(auto& sc : sg.stateCommands)
+        for (auto& sc : sg.stateCommands)
         {
             sc->accept(*this);
         }
@@ -57,7 +56,7 @@ public:
 
         visited.insert(gp);
 
-        for(auto itr = gp->pipelineStates.begin(); itr != gp->pipelineStates.end(); ++itr)
+        for (auto itr = gp->pipelineStates.begin(); itr != gp->pipelineStates.end(); ++itr)
         {
             if ((*itr)->is_compatible(typeid(vsg::ColorBlendState)))
             {
@@ -65,25 +64,25 @@ public:
                 auto perViewGraphicsPipelineState = vsg::PerViewGraphicsPipelineState::create();
 
                 VkPipelineColorBlendAttachmentState left_colorBlendAttachment = {
-                    VK_FALSE,                                                                                                 // blendEnable
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // srcColorBlendFactor
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // dstColorBlendFactor
-                    VK_BLEND_OP_ADD,                                                                                          // colorBlendOp
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // srcAlphaBlendFactor
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // dstAlphaBlendFactor
-                    VK_BLEND_OP_ADD,                                                                                          // alphaBlendOp
+                    VK_FALSE,                                                                                                     // blendEnable
+                    VK_BLEND_FACTOR_ZERO,                                                                                         // srcColorBlendFactor
+                    VK_BLEND_FACTOR_ZERO,                                                                                         // dstColorBlendFactor
+                    VK_BLEND_OP_ADD,                                                                                              // colorBlendOp
+                    VK_BLEND_FACTOR_ZERO,                                                                                         // srcAlphaBlendFactor
+                    VK_BLEND_FACTOR_ZERO,                                                                                         // dstAlphaBlendFactor
+                    VK_BLEND_OP_ADD,                                                                                              // alphaBlendOp
                     VK_COLOR_COMPONENT_R_BIT /*| VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT*/ | VK_COLOR_COMPONENT_A_BIT // colorWriteMask
                 };
 
                 VkPipelineColorBlendAttachmentState right_colorBlendAttachment = {
-                    VK_FALSE,                                                                                                 // blendEnable
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // srcColorBlendFactor
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // dstColorBlendFactor
-                    VK_BLEND_OP_ADD,                                                                                          // colorBlendOp
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // srcAlphaBlendFactor
-                    VK_BLEND_FACTOR_ZERO,                                                                                     // dstAlphaBlendFactor
-                    VK_BLEND_OP_ADD,                                                                                          // alphaBlendOp
-                    /*VK_COLOR_COMPONENT_R_BIT | */VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT // colorWriteMask
+                    VK_FALSE,                                                                                                      // blendEnable
+                    VK_BLEND_FACTOR_ZERO,                                                                                          // srcColorBlendFactor
+                    VK_BLEND_FACTOR_ZERO,                                                                                          // dstColorBlendFactor
+                    VK_BLEND_OP_ADD,                                                                                               // colorBlendOp
+                    VK_BLEND_FACTOR_ZERO,                                                                                          // srcAlphaBlendFactor
+                    VK_BLEND_FACTOR_ZERO,                                                                                          // dstAlphaBlendFactor
+                    VK_BLEND_OP_ADD,                                                                                               // alphaBlendOp
+                    /*VK_COLOR_COMPONENT_R_BIT | */ VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT // colorWriteMask
                 };
 
                 auto left_colorBlendState = vsg::ColorBlendState::create(*colorBlendState);
@@ -124,7 +123,7 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(const vsg::vec3& origin, const vsg::ve
     auto descriptorSetLayout = vsg::DescriptorSetLayout::create(descriptorBindings);
 
     vsg::PushConstantRanges pushConstantRanges{
-        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls autoaatically provided by the VSG's DispatchTraversal
+        {VK_SHADER_STAGE_VERTEX_BIT, 0, 128} // projection view, and model matrices, actual push constant calls automatically provided by the VSG's DispatchTraversal
     };
 
     vsg::VertexInputState::Bindings vertexBindingsDescriptions{
@@ -213,7 +212,7 @@ int main(int argc, char** argv)
     double screenWidth = 0.55;
 
     auto windowTraits = vsg::WindowTraits::create();
-    windowTraits->windowTitle = "Anaglyphic Sterep";
+    windowTraits->windowTitle = "Anaglyphic Stereo";
     windowTraits->fullscreen = true;
     windowTraits->debugLayer = arguments.read({"--debug", "-d"});
     windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
@@ -277,10 +276,9 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    // ColorBlendState needs to be overriden per View, so remove existing instances in the scene graph
+    // ColorBlendState needs to be overridden per View, so remove existing instances in the scene graph
     ReplaceColorBlendState removeColorBlendState;
     vsg_scene->accept(removeColorBlendState);
-
 
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
@@ -316,16 +314,16 @@ int main(int argc, char** argv)
     }
 
     auto master_camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(window->extent2D()));
-    double shear = (eyeSeperation/screenWidth) * 0.8; // quick hack to get convergance roughly conincident with the trackball center.
+    double shear = (eyeSeperation / screenWidth) * 0.8; // quick hack to get convergence roughly coincident with the trackball center.
 
     // create the left eye camera
     auto left_relative_perspective = vsg::RelativeProjection::create(perspective, vsg::translate(-shear, 0.0, 0.0));
-    auto left_relative_view = vsg::RelativeView::create(lookAt, vsg::translate(-0.5*eyeSeperation, 0.0, 0.0));
+    auto left_relative_view = vsg::RelativeView::create(lookAt, vsg::translate(-0.5 * eyeSeperation, 0.0, 0.0));
     auto left_camera = vsg::Camera::create(left_relative_perspective, left_relative_view, vsg::ViewportState::create(window->extent2D()));
 
     // create the left eye camera
     auto right_relative_perspective = vsg::RelativeProjection::create(perspective, vsg::translate(shear, 0.0, 0.0));
-    auto right_relative_view = vsg::RelativeView::create(lookAt, vsg::translate(0.5*eyeSeperation, 0.0, 0.0));
+    auto right_relative_view = vsg::RelativeView::create(lookAt, vsg::translate(0.5 * eyeSeperation, 0.0, 0.0));
     auto right_camera = vsg::Camera::create(right_relative_perspective, right_relative_view, vsg::ViewportState::create(window->extent2D()));
 
     // add close handler to respond the close window button and pressing escape
@@ -356,7 +354,6 @@ int main(int argc, char** argv)
     commandGraph->addChild(renderGraph);
     viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
 
-
     viewer->compile();
 
     // rendering main loop
@@ -368,7 +365,7 @@ int main(int argc, char** argv)
         viewer->update();
 
         double lookDistance = vsg::length(lookAt->center - lookAt->eye);
-        double horizontalSeperation = 0.5*eyeSeperation;
+        double horizontalSeperation = 0.5 * eyeSeperation;
         horizontalSeperation *= (lookDistance / screenDistance);
 
         left_relative_view->matrix = vsg::translate(horizontalSeperation, 0.0, 0.0);

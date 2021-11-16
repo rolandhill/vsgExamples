@@ -24,7 +24,7 @@ public:
     // window related settings used to set up the CompileTraversal
     vsg::ref_ptr<vsg::Window> window;
     vsg::ref_ptr<vsg::ViewportState> viewport;
-    vsg::BufferPreferences buildPreferences;
+    vsg::ResourceRequirements resourceRequirements;
 
     DynamicLoadAndCompile(vsg::ref_ptr<vsg::Window> in_window, vsg::ref_ptr<vsg::ViewportState> in_viewport, vsg::ref_ptr<vsg::ActivityStatus> in_status = vsg::ActivityStatus::create()) :
         status(in_status),
@@ -109,13 +109,13 @@ public:
             {
                 auto ct = compileTraversals.front();
                 compileTraversals.erase(compileTraversals.begin());
-                std::cout << "takeCompileTraversal() resuing " << ct << std::endl;
+                std::cout << "takeCompileTraversal() resuming " << ct << std::endl;
                 return ct;
             }
         }
 
         std::cout << "takeCompileTraversal() creating a new CompileTraversal" << std::endl;
-        auto ct = vsg::CompileTraversal::create(window, viewport, buildPreferences);
+        auto ct = vsg::CompileTraversal::create(window, viewport, resourceRequirements);
 
         return ct;
     }
@@ -174,11 +174,11 @@ void DynamicLoadAndCompile::CompileOperation::run()
 
         auto compileTraversal = dynamicLoadAndCompile->takeCompileTraversal();
 
-        vsg::CollectDescriptorStats collectStats;
-        request->loaded->accept(collectStats);
+        vsg::CollectResourceRequirements collectRequirements;
+        request->loaded->accept(collectRequirements);
 
-        auto maxSets = collectStats.computeNumDescriptorSets();
-        auto descriptorPoolSizes = collectStats.computeDescriptorPoolSizes();
+        auto maxSets = collectRequirements.requirements.computeNumDescriptorSets();
+        auto descriptorPoolSizes = collectRequirements.requirements.computeDescriptorPoolSizes();
 
         // brute force allocation of new DescrptorPool for this subgraph, TODO : need to preallocate large DescritorPoil for multiple loaded subgraphs
         if (descriptorPoolSizes.size() > 0) compileTraversal->context.descriptorPool = vsg::DescriptorPool::create(compileTraversal->context.device, maxSets, descriptorPoolSizes);
@@ -213,7 +213,7 @@ int main(int argc, char** argv)
         // set up defaults and read command line arguments to override them
         vsg::CommandLine arguments(&argc, argv);
 
-        // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO realted options to use when reading and writing files.
+        // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO related options to use when reading and writing files.
         auto options = vsg::Options::create();
         options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
 
@@ -249,7 +249,7 @@ int main(int argc, char** argv)
         // create a Group to contain all the nodes
         auto vsg_scene = vsg::Group::create();
 
-        // Assign any ResourceHints so that the Compile traversal can allocate suffucient DescriptorPool resources for the needs of loading all possible models.
+        // Assign any ResourceHints so that the Compile traversal can allocate sufficient DescriptorPool resources for the needs of loading all possible models.
         if (resourceHints)
         {
             vsg_scene->setObject("ResourceHints", resourceHints);
@@ -295,11 +295,11 @@ int main(int argc, char** argv)
         auto commandGraph = vsg::createCommandGraphForView(window, camera, vsg_scene);
         viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
 
-        // create the DynamicLoadAndCompile obbject that manages loading, compile and merging of new objects.
-        // Pass in window and viewportState to help initalize CompilTraversals
+        // create the DynamicLoadAndCompile object that manages loading, compile and merging of new objects.
+        // Pass in window and viewportState to help initialize CompilTraversals
         auto dynamicLoadAndCompile = DynamicLoadAndCompile::create(window, viewportState, viewer->status);
 
-        // build the sene graph attachmments points to place all of the loaded models at.
+        // build the scene graph attachments points to place all of the loaded models at.
         for (int i = 1; i < argc; ++i)
         {
             int index = i - 1;

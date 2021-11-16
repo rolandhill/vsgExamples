@@ -121,7 +121,7 @@ int main(int argc, char** argv)
     if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
     if (arguments.read("--IMMEDIATE")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     if (arguments.read("--double-buffer")) windowTraits->swapchainPreferences.imageCount = 2;
-    if (arguments.read("--triple-buffer")) windowTraits->swapchainPreferences.imageCount = 3; // defaul
+    if (arguments.read("--triple-buffer")) windowTraits->swapchainPreferences.imageCount = 3; // default
     if (arguments.read("-t"))
     {
         windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
     if (!(box || sphere || cone || capsule || quad || cylinder || disk || heightfield || sprites))
     {
         box = true;
-        capsule  = true;
+        capsule = true;
         cone = true;
         cylinder = true;
         disk = true;
@@ -217,20 +217,20 @@ int main(int argc, char** argv)
 
             float w = std::pow(float(numVertices), 0.33f) * 2.0f;
             geomInfo.positions = vsg::vec3Array::create(numVertices);
-            for(auto& v : *(geomInfo.positions))
+            for (auto& v : *(geomInfo.positions))
             {
                 v.set(w * (float(std::rand()) / float(RAND_MAX) - 0.5f),
                       w * (float(std::rand()) / float(RAND_MAX) - 0.5f),
                       w * (float(std::rand()) / float(RAND_MAX) - 0.5f));
             }
 
-            radius += (0.5 * sqrt(3.0) * w) ;
+            radius += (0.5 * sqrt(3.0) * w);
 
             if (floatColors)
             {
                 auto colors = vsg::vec4Array::create(geomInfo.positions->size());
                 geomInfo.colors = colors;
-                for(auto& c : *(colors))
+                for (auto& c : *(colors))
                 {
                     c.set(float(std::rand()) / float(RAND_MAX), float(std::rand()) / float(RAND_MAX), float(std::rand()) / float(RAND_MAX), 1.0f);
                 }
@@ -239,12 +239,11 @@ int main(int argc, char** argv)
             {
                 auto colors = vsg::ubvec4Array::create(geomInfo.positions->size());
                 geomInfo.colors = colors;
-                for(auto& c : *(colors))
+                for (auto& c : *(colors))
                 {
                     c.set(uint8_t(255.0 * float(std::rand()) / float(RAND_MAX)), uint8_t(255.0 * float(std::rand()) / float(RAND_MAX)), uint8_t(255.0 * float(std::rand()) / float(RAND_MAX)), 255);
                 }
             }
-
         }
 
         if (box)
@@ -372,7 +371,7 @@ int main(int argc, char** argv)
 
     auto camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(window->extent2D()));
 
-    // set up the compilation support in builder to allow us to interactively create and compile subgraphs from wtihin the IntersectionHandler
+    // set up the compilation support in builder to allow us to interactively create and compile subgraphs from within the IntersectionHandler
     // builder->setup(window, camera->viewportState);
 
     // add close handler to respond the close window button and pressing escape
@@ -406,7 +405,7 @@ int main(int argc, char** argv)
     auto duration = std::chrono::duration<double, std::chrono::seconds::period>(vsg::clock::now() - startTime).count();
     if (numFramesCompleted > 0.0)
     {
-        std::cout<<"Average frame rate = "<<(numFramesCompleted / duration)<<std::endl;
+        std::cout << "Average frame rate = " << (numFramesCompleted / duration) << std::endl;
     }
 
     return 0;
