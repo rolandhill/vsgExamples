@@ -1,14 +1,20 @@
 # vsgExamples
-Example programs that test and illustrate how to use the [VulkanSceneGraph/VkSceneGraph](https://github.com/vsg-dev/VulkanSceneGraphPrototype/) and optional add-on libraries. The example programs are grouped according to the type of features they illustrate their dependencies.
+Example programs that test and illustrate how to use the [VulkanSceneGraph](https://github.com/vsg-dev/VulkanSceneGraphPrototype/) and optional add-on libraries. The example programs are grouped according to the type of features they illustrate their dependencies.
 
-## Core examples
-The [Core](Core/) directory contains examples illustrate core class features of the VSG such as reference counting, maths, visitors etc.
-
-## Desktop examples
-The [Desktop](Desktop/) directory contains examples use the VSG's native Windowing to create various different desktop graphics applications
-
-## Android examples
-The [Android](Android/) directory contains examples illustrate how to create Android graphics applications
+* [core](examples/core/) examples
+* [maths](examples/maths/) examples
+* [viewer](examples/viewer/) examples
+* [vk](examples/vk/) examples
+* [text](examples/text/) examples
+* [rtx](examples/rtx/) examples
+* [state](examples/state/) examples
+* [commands](examples/commands/) examples
+* [introspection](examples/introspection/) examples
+* [io](examples/io/) examples
+* [ui](examples/ui/) examples
+* [traversals](examples/traversals/) examples
+* [platform](examples/platform/) examples
+* [utils](examples/utils/) examples
 
 ## Quick Guide to Building the vsgExamples
 
@@ -17,6 +23,8 @@ The [Android](Android/) directory contains examples illustrate how to create And
 * [Vulkan](https://vulkan.lunarg.com/) 1.1 or later.
 * [CMake](https://www.cmake.org) 3.7 or later.
 * [VulkanSceneGraph](https://github.com/vsg-dev/VulkanSceneGraph/) use master
+* [vsgXchange](https://github.com/vsg-dev/vsgXchange/) optional - used for 3d model and image loaders
+* [vsgImGui](https://github.com/vsg-dev/vsgimGui/) optional - used for in window GUI examples
 
 The above dependency versions are known to work so they've been set as the current minimum, it may be possible to build against older versions.  If you find success with older versions let us know and we can update the version info.
 
@@ -34,7 +42,7 @@ Full details on how to build of the VSG can be found in the [INSTALL.md](INSTALL
 
 After you have built the examples you should set your binary search path to the vsgExamples/bin directory, and the VSG_FILE_PATH env vars.
 
-	export PATH=/path/to/vsgExamples/bin
+	export PATH="$PATH:/path/to/vsgExamples/bin"
 	export VSG_FILE_PATH=/path/to/vsgExamples/data
 
 Then run examples:
