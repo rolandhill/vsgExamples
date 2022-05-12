@@ -222,8 +222,19 @@ int main(int argc, char** argv)
     // load VulkanSceneGraph scene graph
     auto vsg_scene = vsg::read_cast<vsg::Node>(filename, options);
 
+    if (!vsg_scene)
+    {
+        std::cout<<"vsg::read() could not read : "<<filename<<std::endl;
+        return 1;
+    }
+
     // load OpenSceneGraph scene graph
     auto osg_scene = osgDB::readRefNodeFile(filename);
+    if (!osg_scene)
+    {
+        std::cout<<"osgDB::readRefNodeFile() could not read : "<<filename<<std::endl;
+        return 1;
+    }
 
 
     // create the VulkanSceneGraph viewer and assign window(s) to it
