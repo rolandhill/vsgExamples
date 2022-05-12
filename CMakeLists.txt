@@ -29,6 +29,17 @@ find_package(vsgXchange QUIET)
 # find the optional vsgImGui that can be used for GUI elements added into graphics window.
 find_package(vsgImGui QUIET)
 
+# Find OpenScenegraph - only required for the vsgwithosg example
+set(OSG_MIN_VERSION 3.6)
+find_package(OpenThreads ${OSG_MIN_VERSION} QUIET)
+find_package(osg ${OSG_MIN_VERSION} QUIET)
+find_package(osgDB ${OSG_MIN_VERSION} QUIET)
+find_package(osgGA ${OSG_MIN_VERSION} QUIET)
+find_package(osgViewer ${OSG_MIN_VERSION} QUIET)
+find_package(osgUtil ${OSG_MIN_VERSION} QUIET)
+find_package(OpenGL QUIET)
+
+
 # set the use of C++17 globally as all examples require it
 set(CMAKE_CXX_STANDARD 17)
 

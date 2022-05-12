@@ -1,8 +1,7 @@
 #include <vsg/all.h>
 
-#ifdef USE_VSGXCHANGE
-#include <vsgXchange/ReaderWriter_all.h>
-#include <vsgXchange/ShaderCompiler.h>
+#ifdef vsgXchange_FOUND
+#    include <vsgXchange/all.h>
 #endif
 
 #include <osgDB/ReadFile>
@@ -16,9 +15,6 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
-
-#include "../shared/AnimationPath.h"
-
 
 vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData)
 {
@@ -127,7 +123,7 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData)
     auto texture = vsg::DescriptorImage::create(vsg::Sampler::create(), textureData, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
     auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{texture});
-    auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->getPipelineLayout(), 0, vsg::DescriptorSets{descriptorSet});
+    auto bindDescriptorSets = vsg::BindDescriptorSets::create(VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline->layout, 0, vsg::DescriptorSets{descriptorSet});
 
     // create StateGroup as the root of the scene/command graph to hold the GraphicsProgram, and binding of Descriptors to decorate the whole graph
     auto scenegraph = vsg::StateGroup::create();
@@ -187,30 +183,15 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData)
 
     return scenegraph;
 }
-
-vsg::ref_ptr<vsg::AnimationPath> readAnimationPath(const vsg::Path& pathFilename)
-{
-    if (pathFilename.empty()) return {};
-
-    std::ifstream in(pathFilename);
-    if (!in)
-    {
-        std::cout << "AnimationPat: Could not open animation path file \"" << pathFilename << "\".\n";
-        return {};
-    }
-
-    vsg::ref_ptr<vsg::AnimationPath> animationPath(new vsg::AnimationPath);
-    animationPath->read(in);
-
-    return animationPath;
-}
-
 int main(int argc, char** argv)
 {
-#ifdef USE_VSGXCHANGE
-    auto options = vsg::Options::create(vsgXchange::ReaderWriter_all::create()); // use vsgXchange's for reading and writing 3rd party file formats
-#else
+    // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO related options to use when reading and writing files.
     auto options = vsg::Options::create();
+    options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
+    options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
+#ifdef vsgXchange_all
+        // add vsgXchange's support for reading and writing 3rd party file formats
+        options->add(vsgXchange::all::create());
 #endif
 
     auto windowTraits = vsg::WindowTraits::create();
@@ -226,7 +207,7 @@ int main(int argc, char** argv)
     if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
     arguments.read("--screen", windowTraits->screenNum);
     arguments.read("--display", windowTraits->display);
-    auto pathFilename = arguments.value(std::string(),"-p");
+    auto pathFilename = arguments.value<vsg::Path>("","-p");
     auto horizonMountainHeight = arguments.value(0.0, "--hmh");
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
@@ -280,8 +261,20 @@ int main(int argc, char** argv)
         // add close handler to respond the close window button and pressing escape
         vsg_viewer->addEventHandler(vsg::CloseHandler::create(vsg_viewer));
 
-        if (pathFilename.empty()) vsg_viewer->addEventHandler(vsg::Trackball::create(vsg_camera));
-        else vsg_viewer->addEventHandler(vsg::AnimationPathHandler::create(vsg_camera, readAnimationPath(pathFilename), vsg_viewer->start_point()));
+        if (pathFilename)
+        {
+            auto animationPath = vsg::read_cast<vsg::AnimationPath>(pathFilename, options);
+            if (!animationPath)
+            {
+                std::cout<<"Warning: unable to read animation path : "<<pathFilename<<std::endl;
+                return 1;
+            }
+
+            auto animationPathHandler = vsg::AnimationPathHandler::create(vsg_camera, animationPath, vsg_viewer->start_point());
+            animationPathHandler->printFrameStatsToConsole = true;
+            vsg_viewer->addEventHandler(animationPathHandler);
+        }
+        else vsg_viewer->addEventHandler(vsg::Trackball::create(vsg_camera));
 
         auto commandGraph = vsg::createCommandGraphForView(vsg_window, vsg_camera, vsg_scene);
         vsg_viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});

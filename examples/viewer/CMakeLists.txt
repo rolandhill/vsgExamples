@@ -16,3 +16,7 @@ add_subdirectory(vsgcameras)
 if (vsgXchange_FOUND)
     add_subdirectory(vsghelloworld)
 endif()
+
+if (OSG_FOUND AND OSGDB_FOUND AND OSGVIEWER_FOUND AND OSGUTIL_FOUND)
+    add_subdirectory(vsgwithosg)
+endif()
