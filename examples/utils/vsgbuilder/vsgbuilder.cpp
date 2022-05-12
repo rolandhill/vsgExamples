@@ -11,7 +11,7 @@ int main(int argc, char** argv)
     // set up defaults and read command line arguments to override them
     auto options = vsg::Options::create();
     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
-    options->objectCache = vsg::ObjectCache::create();
+    options->sharedObjects = vsg::SharedObjects::create();
 
     auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "vsgbuilder";
@@ -46,12 +46,14 @@ int main(int argc, char** argv)
         windowTraits->decoration = false;
     }
 
+    if (arguments.read("--shared")) options->sharedObjects = vsg::SharedObjects::create();
+
     auto outputFilename = arguments.value<std::string>("", "-o");
 
     bool floatColors = !arguments.read("--ubvec4-colors");
     stateInfo.wireframe = arguments.read("--wireframe");
     stateInfo.lighting = !arguments.read("--flat");
-    stateInfo.doubleSided = arguments.read("--two-sided");
+    stateInfo.two_sided = arguments.read("--two-sided");
 
     arguments.read("--dx", geomInfo.dx);
     arguments.read("--dy", geomInfo.dy);
@@ -102,16 +104,16 @@ int main(int argc, char** argv)
         //geomInfo.transform = vsg::inverse(vsg::perspective(vsg::radians(60.0f), 1920.0f/1080.0f, 1.0f, 100.0f)  * vsg::translate(0.0f, 0.0f, -1.0f) * vsg::scale(1.0f, 1.0f, 2.0f));
         //geomInfo.transform = vsg::rotate(vsg::radians(0.0), 0.0, 0.0, 1.0);
 
-        if (!textureFile.empty()) stateInfo.image = vsg::read_cast<vsg::Data>(textureFile, options);
-        if (!displacementFile.empty()) stateInfo.displacementMap = vsg::read_cast<vsg::Data>(displacementFile, options);
+        if (textureFile) stateInfo.image = vsg::read_cast<vsg::Data>(textureFile, options);
+        if (displacementFile) stateInfo.displacementMap = vsg::read_cast<vsg::Data>(displacementFile, options);
 
         vsg::dbox bound;
 
         if (numVertices > 0)
         {
-            stateInfo.instancce_positions_vec3 = true;
+            stateInfo.instance_positions_vec3 = true;
 
-            float w = std::pow(float(numVertices), 0.33f) * 2.0f;
+            float w = std::pow(float(numVertices), 0.33f) * 2.0f * vsg::length(geomInfo.dx);
             geomInfo.positions = vsg::vec3Array::create(numVertices);
             for (auto& v : *(geomInfo.positions))
             {

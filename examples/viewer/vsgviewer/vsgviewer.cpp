@@ -107,6 +107,9 @@ vsg::ref_ptr<vsg::Node> createTextureQuad(vsg::ref_ptr<vsg::Data> sourceData, ui
     // create texture image and associated DescriptorSets and binding
     auto sampler = vsg::Sampler::create();
     sampler->maxLod = mipmapLevelsHints;
+    sampler->addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler->addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    sampler->addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     auto texture = vsg::DescriptorImage::create(sampler, textureData, 0, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 
     auto descriptorSet = vsg::DescriptorSet::create(descriptorSetLayout, vsg::Descriptors{texture});
@@ -186,6 +189,7 @@ int main(int argc, char** argv)
         windowTraits->windowTitle = "vsgviewer";
         windowTraits->debugLayer = arguments.read({"--debug", "-d"});
         windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
+        if (int mt = 0; arguments.read({"--memory-tracking", "--mt"}, mt)) vsg::Allocator::instance()->setMemoryTracking(mt);
         if (arguments.read("--double-buffer")) windowTraits->swapchainPreferences.imageCount = 2;
         if (arguments.read("--triple-buffer")) windowTraits->swapchainPreferences.imageCount = 3; // default
         if (arguments.read("--IMMEDIATE")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
@@ -318,7 +322,10 @@ int main(int argc, char** argv)
                 std::cout<<"Warning: unable to read animation path : "<<pathFilename<<std::endl;
                 return 1;
             }
-            viewer->addEventHandler(vsg::AnimationPathHandler::create(camera, animationPath, viewer->start_point()));
+
+            auto animationPathHandler = vsg::AnimationPathHandler::create(camera, animationPath, viewer->start_point());
+            animationPathHandler->printFrameStatsToConsole = true;
+            viewer->addEventHandler(animationPathHandler);
         }
 
         // if required preload specific number of PagedLOD levels.

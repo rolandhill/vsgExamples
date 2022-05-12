@@ -4,6 +4,27 @@
 #    include <vsgXchange/all.h>
 #endif
 
+namespace vsg
+{
+    /// make a VK_API_VERSION value from a version string, i,e, a string of "1,2" maps to VK_API_VERSION_1_2
+    uint32_t makeVulkanApiVersion(const std::string& versionStr)
+    {
+        char c;
+        uint32_t vk_major = 1, vk_minor = 0;
+        std::stringstream vk_version_str(versionStr);
+        vk_version_str >> vk_major >> c >> vk_minor;
+        std::cout<<"vk_major = "<<vk_major<<std::endl;
+        std::cout<<"vk_minor = "<<vk_minor<<std::endl;
+    #if defined(VK_MAKE_API_VERSION)
+        return VK_MAKE_API_VERSION(0, vk_major, vk_minor, 0);
+    #elif defined(VK_MAKE_VERSION)
+        return VK_MAKE_VERSION(vk_major, vk_minor, 0);
+    #else
+        return VK_API_VERSION_1_0;
+    #endif
+    }
+}
+
 int main(int argc, char** argv)
 {
     // set up defaults and read command line arguments to override them
@@ -23,6 +44,21 @@ int main(int argc, char** argv)
     windowTraits->windowTitle = "vsgdeviceslection";
     arguments.read("--screen", windowTraits->screenNum);
     arguments.read("--display", windowTraits->display);
+
+    if (vkEnumerateInstanceVersion(&windowTraits->vulkanVersion) == VK_SUCCESS)
+    {
+        std::cout<<"vkEnumerateInstanceVersion() "<<windowTraits->vulkanVersion<<std::endl;
+    }
+
+    if (std::string versionStr; arguments.read("--vulkan", versionStr))
+    {
+        windowTraits->vulkanVersion = vsg::makeVulkanApiVersion(versionStr);
+    }
+
+#ifdef VK_API_VERSION_MAJOR
+    auto version = windowTraits->vulkanVersion;
+    std::cout<<"VK_API_VERSION = "<<VK_API_VERSION_MAJOR(version) <<"."<<VK_API_VERSION_MINOR(version)<<"."<<VK_API_VERSION_PATCH(version)<<"."<<VK_API_VERSION_VARIANT(version)<<std::endl;
+#endif
 
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();

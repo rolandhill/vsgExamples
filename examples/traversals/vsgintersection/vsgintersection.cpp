@@ -39,7 +39,7 @@ public:
             interesection(*lastPointerEvent);
             if (!lastIntersection) return;
 
-            geom.position = vsg::vec3(lastIntersection.worldIntersection);
+            geom.position = vsg::vec3(lastIntersection->worldIntersection);
             geom.dx.set(scale, 0.0f, 0.0f);
             geom.dy.set(0.0f, scale, 0.0f);
             geom.dz.set(0.0f, 0.0f, scale);
@@ -100,38 +100,38 @@ public:
         if (intersector->intersections.empty()) return;
 
         // sort the intersectors front to back
-        std::sort(intersector->intersections.begin(), intersector->intersections.end(), [](auto lhs, auto rhs) { return lhs.ratio < rhs.ratio; });
+        std::sort(intersector->intersections.begin(), intersector->intersections.end(), [](auto& lhs, auto& rhs) { return lhs->ratio < rhs->ratio; });
 
         for (auto& intersection : intersector->intersections)
         {
-            if (verbose) std::cout << "intersection = " << intersection.worldIntersection << " ";
+            if (verbose) std::cout << "intersection = world(" << intersection->worldIntersection << "), instanceIndex " <<intersection->instanceIndex;
 
             if (ellipsoidModel)
             {
                 std::cout.precision(10);
-                auto location = ellipsoidModel->convertECEFToLatLongAltitude(intersection.worldIntersection);
+                auto location = ellipsoidModel->convertECEFToLatLongAltitude(intersection->worldIntersection);
                 if (verbose) std::cout << " lat = " << location[0] << ", long = " << location[1] << ", height = " << location[2];
             }
 
             if (lastIntersection)
             {
-                if (verbose) std::cout << ", distance from previous intersection = " << vsg::length(intersection.worldIntersection - lastIntersection.worldIntersection);
+                if (verbose) std::cout << ", distance from previous intersection = " << vsg::length(intersection->worldIntersection - lastIntersection->worldIntersection);
             }
 
             if (verbose)
             {
-                for (auto& node : intersection.nodePath)
+                for (auto& node : intersection->nodePath)
                 {
                     std::cout << ", " << node->className();
                 }
 
                 std::cout << ", Arrays[ ";
-                for (auto& array : intersection.arrays)
+                for (auto& array : intersection->arrays)
                 {
                     std::cout << array << " ";
                 }
                 std::cout << "] [";
-                for (auto& ir : intersection.indexRatios)
+                for (auto& ir : intersection->indexRatios)
                 {
                     std::cout << "{" << ir.index << ", " << ir.ratio << "} ";
                 }
@@ -146,7 +146,7 @@ public:
 
 protected:
     vsg::ref_ptr<vsg::PointerEvent> lastPointerEvent;
-    vsg::LineSegmentIntersector::Intersection lastIntersection;
+    vsg::ref_ptr<vsg::LineSegmentIntersector::Intersection> lastIntersection;
 };
 
 int main(int argc, char** argv)
@@ -154,7 +154,7 @@ int main(int argc, char** argv)
     // set up defaults and read command line arguments to override them
     auto options = vsg::Options::create();
     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
-    options->objectCache = vsg::ObjectCache::create();
+    options->sharedObjects = vsg::SharedObjects::create();
 
     auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "vsginteresction";
@@ -195,7 +195,7 @@ int main(int argc, char** argv)
 
     vsg::StateInfo stateInfo;
 
-    if (!textureFile.empty())
+    if (textureFile)
     {
         stateInfo.image = vsg::read_cast<vsg::Data>(textureFile, options);
     }
@@ -271,8 +271,8 @@ int main(int argc, char** argv)
 
     auto camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(window->extent2D()));
 
-    // set up the compilation support in builder to allow us to interactively create and compile subgraphs from within the IntersectionHandler
-    builder->setup(window, camera->viewportState);
+    auto commandGraph = createCommandGraphForView(window, camera, scene);
+    viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
 
     // add close handler to respond the close window button and pressing escape
     viewer->addEventHandler(vsg::CloseHandler::create(viewer));
@@ -283,8 +283,9 @@ int main(int argc, char** argv)
     intersectionHandler->state = stateInfo;
     viewer->addEventHandler(intersectionHandler);
 
-    auto commandGraph = vsg::createCommandGraphForView(window, camera, scene);
-    viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
+    // assign a CompileTraversal to the Builder that will compile for all the views assigned to the viewer,
+    // must be done after Viewer.assignRecordAndSubmitTasksAndPresentations();
+    builder->assignCompileTraversal(vsg::CompileTraversal::create(viewer));
 
     viewer->compile();
 

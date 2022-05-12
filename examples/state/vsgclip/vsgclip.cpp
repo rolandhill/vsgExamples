@@ -70,6 +70,7 @@ public:
         scrollWheel.handled = true;
         scale *= (1.0 + scrollWheel.delta.y * 0.1);
         world_ClipSetttings->at(0).w = scale;
+        world_ClipSetttings->dirty();
     }
 
     void interesection(vsg::PointerEvent& pointerEvent)
@@ -80,10 +81,11 @@ public:
         if (intersector->intersections.empty()) return;
 
         // sort the intersectors front to back
-        std::sort(intersector->intersections.begin(), intersector->intersections.end(), [](auto lhs, auto rhs) { return lhs.ratio < rhs.ratio; });
+        std::sort(intersector->intersections.begin(), intersector->intersections.end(), [](auto lhs, auto rhs) { return lhs->ratio < rhs->ratio; });
 
-        auto& intersection = intersector->intersections.front();
+        auto& intersection = *intersector->intersections.front();
         world_ClipSetttings->at(0) = vsg::vec4(intersection.worldIntersection.x, intersection.worldIntersection.y, intersection.worldIntersection.z, scale);
+        world_ClipSetttings->dirty();
     }
 
 protected:
@@ -162,7 +164,7 @@ int main(int argc, char** argv)
 
         if (!vertexShader || !fragmentShader)
         {
-            std::cout << "Could not find shader files " << vertexShaderFilename << " and/or " << fragmentShaderFilename << std::endl;
+            std::cout << "Could not read shader files " << vertexShaderFilename << " and/or " << fragmentShaderFilename << std::endl;
             std::cout << "Please set VSG_FILE_PATH environmental variable to your vsgExamples/data directory." << std::endl;
             return 1;
         }
@@ -290,7 +292,7 @@ int main(int argc, char** argv)
         vsg_scene->add(bindDescriptorSet);
         vsg_scene->addChild(model);
 
-        if (!outputFilename.empty())
+        if (outputFilename)
         {
             vsg::write(vsg_scene, outputFilename);
             return 1;
