@@ -237,11 +237,11 @@ int main(int argc, char** argv)
     options->add(vsgXchange::all::create());
 #endif
 
-    uint32_t leftMask = 0x1;
-    uint32_t rightMask = 0x2;
+    vsg::Mask leftMask = 0x1;
+    vsg::Mask rightMask = 0x2;
 
     vsg::ref_ptr<vsg::Node> vsg_scene;
-    if (!leftImageFilename.empty() && !rightImageFilename.empty())
+    if (leftImageFilename && rightImageFilename)
     {
         auto leftImage = vsg::read_cast<vsg::Data>(leftImageFilename, options);
         auto rightImage = vsg::read_cast<vsg::Data>(rightImageFilename, options);
@@ -255,7 +255,7 @@ int main(int argc, char** argv)
             auto leftQuad = createTextureQuad(origin - offset * 0.5f, horizontal, vertical, leftImage);
             auto rightQuad = createTextureQuad(origin + offset * 0.5f, horizontal, vertical, rightImage);
 
-            auto maskGroup = vsg::MaskGroup::create();
+            auto maskGroup = vsg::Switch::create();
             maskGroup->addChild(leftMask, leftQuad);
             maskGroup->addChild(rightMask, rightQuad);
 
@@ -317,13 +317,13 @@ int main(int argc, char** argv)
     double shear = (eyeSeperation / screenWidth) * 0.8; // quick hack to get convergence roughly coincident with the trackball center.
 
     // create the left eye camera
-    auto left_relative_perspective = vsg::RelativeProjection::create(perspective, vsg::translate(-shear, 0.0, 0.0));
-    auto left_relative_view = vsg::RelativeView::create(lookAt, vsg::translate(-0.5 * eyeSeperation, 0.0, 0.0));
+    auto left_relative_perspective = vsg::RelativeProjection::create(vsg::translate(-shear, 0.0, 0.0), perspective);
+    auto left_relative_view = vsg::RelativeViewMatrix::create(vsg::translate(-0.5 * eyeSeperation, 0.0, 0.0), lookAt);
     auto left_camera = vsg::Camera::create(left_relative_perspective, left_relative_view, vsg::ViewportState::create(window->extent2D()));
 
     // create the left eye camera
-    auto right_relative_perspective = vsg::RelativeProjection::create(perspective, vsg::translate(shear, 0.0, 0.0));
-    auto right_relative_view = vsg::RelativeView::create(lookAt, vsg::translate(0.5 * eyeSeperation, 0.0, 0.0));
+    auto right_relative_perspective = vsg::RelativeProjection::create(vsg::translate(shear, 0.0, 0.0), perspective);
+    auto right_relative_view = vsg::RelativeViewMatrix::create(vsg::translate(0.5 * eyeSeperation, 0.0, 0.0), lookAt);
     auto right_camera = vsg::Camera::create(right_relative_perspective, right_relative_view, vsg::ViewportState::create(window->extent2D()));
 
     // add close handler to respond the close window button and pressing escape
@@ -340,7 +340,7 @@ int main(int argc, char** argv)
 
     // clear the depth buffer before view2 gets rendered
     VkClearValue clearValue{};
-    clearValue.depthStencil = {1.0f, 0};
+    clearValue.depthStencil = {0.0f, 0};
     VkClearAttachment depth_attachment{VK_IMAGE_ASPECT_DEPTH_BIT, 1, clearValue};
     VkClearRect rect{right_camera->getRenderArea(), 0, 1};
     auto clearAttachments = vsg::ClearAttachments::create(vsg::ClearAttachments::Attachments{depth_attachment}, vsg::ClearAttachments::Rects{rect});

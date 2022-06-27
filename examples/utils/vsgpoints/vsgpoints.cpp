@@ -332,9 +332,9 @@ vsg::ref_ptr<vsg::StateGroup> createStateGroup(vsg::ref_ptr<const vsg::Options> 
 vsg::ref_ptr<vsg::Node> read(const vsg::Path& filename, vsg::ref_ptr<const vsg::Options> options, FormatLayout formatLayout)
 {
     vsg::Path filenameToUse = vsg::findFile(filename, options);
-    if (filenameToUse.empty()) return {};
+    if (!filenameToUse) return {};
 
-    std::ifstream fin(filenameToUse.c_str());
+    std::ifstream fin(filenameToUse);
     if (!fin) return {};
 
     fin.imbue(std::locale::classic());
@@ -366,7 +366,7 @@ int main(int argc, char** argv)
     // set up defaults and read command line arguments to override them
     auto options = vsg::Options::create();
     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
-    options->objectCache = vsg::ObjectCache::create();
+    options->sharedObjects = vsg::SharedObjects::create();
 
 #ifdef vsgXchange_all
     // add vsgXchange's support for reading and writing 3rd party file formats
@@ -420,7 +420,7 @@ int main(int argc, char** argv)
     {
         std::string filename = argv[i];
         auto ext = vsg::lowerCaseFileExtension(filename);
-        if (ext == "asc" || ext == "3dc")
+        if (ext == ".asc" || ext == ".3dc")
         {
             // if we have 10 values per line
 #if 1

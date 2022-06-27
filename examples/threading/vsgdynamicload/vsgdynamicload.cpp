@@ -9,202 +9,71 @@
 #include <iostream>
 #include <thread>
 
-class DynamicLoadAndCompile : public vsg::Inherit<vsg::Object, DynamicLoadAndCompile>
+struct Merge : public vsg::Inherit<vsg::Operation, Merge>
 {
-public:
-    vsg::ref_ptr<vsg::ActivityStatus> status;
+    Merge(const vsg::Path& in_path, vsg::observer_ptr<vsg::Viewer> in_viewer, vsg::ref_ptr<vsg::Group> in_attachmentPoint, vsg::ref_ptr<vsg::Node> in_node, const vsg::CompileResult& in_compileResult):
+        path(in_path),
+        viewer(in_viewer),
+        attachmentPoint(in_attachmentPoint),
+        node(in_node),
+        compileResult(in_compileResult) {}
 
-    vsg::ref_ptr<vsg::OperationThreads> loadThreads;
-    vsg::ref_ptr<vsg::OperationThreads> compileThreads;
-    vsg::ref_ptr<vsg::OperationQueue> mergeQueue;
+    vsg::Path path;
+    vsg::observer_ptr<vsg::Viewer> viewer;
+    vsg::ref_ptr<vsg::Group> attachmentPoint;
+    vsg::ref_ptr<vsg::Node> node;
+    vsg::CompileResult compileResult;
 
-    std::mutex mutex_compileTraversals;
-    std::list<vsg::ref_ptr<vsg::CompileTraversal>> compileTraversals;
-
-    // window related settings used to set up the CompileTraversal
-    vsg::ref_ptr<vsg::Window> window;
-    vsg::ref_ptr<vsg::ViewportState> viewport;
-    vsg::ResourceRequirements resourceRequirements;
-
-    DynamicLoadAndCompile(vsg::ref_ptr<vsg::Window> in_window, vsg::ref_ptr<vsg::ViewportState> in_viewport, vsg::ref_ptr<vsg::ActivityStatus> in_status = vsg::ActivityStatus::create()) :
-        status(in_status),
-        window(in_window),
-        viewport(in_viewport)
+    void run() override
     {
-        loadThreads = vsg::OperationThreads::create(12, status);
-        compileThreads = vsg::OperationThreads::create(1, status);
-        mergeQueue = vsg::OperationQueue::create(status);
-    }
+        std::cout<<"Merge::run() path = "<<path<<", "<<attachmentPoint<<", "<<node<<std::endl;
 
-    struct Request : public vsg::Inherit<vsg::Object, Request>
-    {
-        Request(const vsg::Path& in_filename, vsg::ref_ptr<vsg::Group> in_attachmentPoint, vsg::ref_ptr<vsg::Options> in_options) :
-            filename(in_filename),
-            attachmentPoint(in_attachmentPoint),
-            options(in_options) {}
-
-        vsg::Path filename;
-        vsg::ref_ptr<vsg::Group> attachmentPoint;
-        vsg::ref_ptr<vsg::Options> options;
-        vsg::ref_ptr<vsg::Node> loaded;
-    };
-
-    struct LoadOperation : public vsg::Inherit<vsg::Operation, LoadOperation>
-    {
-        LoadOperation(vsg::ref_ptr<Request> in_request, vsg::observer_ptr<DynamicLoadAndCompile> in_dlac) :
-            request(in_request),
-            dlac(in_dlac) {}
-
-        vsg::ref_ptr<Request> request;
-        vsg::observer_ptr<DynamicLoadAndCompile> dlac;
-
-        void run() override;
-    };
-
-    struct CompileOperation : public vsg::Inherit<vsg::Operation, CompileOperation>
-    {
-        CompileOperation(vsg::ref_ptr<Request> in_request, vsg::observer_ptr<DynamicLoadAndCompile> in_dlac) :
-            request(in_request),
-            dlac(in_dlac) {}
-
-        vsg::ref_ptr<Request> request;
-        vsg::observer_ptr<DynamicLoadAndCompile> dlac;
-
-        void run() override;
-    };
-
-    struct MergeOperation : public vsg::Inherit<vsg::Operation, MergeOperation>
-    {
-        MergeOperation(vsg::ref_ptr<Request> in_request, vsg::observer_ptr<DynamicLoadAndCompile> in_dlac) :
-            request(in_request),
-            dlac(in_dlac) {}
-
-        vsg::ref_ptr<Request> request;
-        vsg::observer_ptr<DynamicLoadAndCompile> dlac;
-
-        void run() override;
-    };
-
-    void loadRequest(const vsg::Path& filename, vsg::ref_ptr<vsg::Group> attachmentPoint, vsg::ref_ptr<vsg::Options> options)
-    {
-        auto request = Request::create(filename, attachmentPoint, options);
-        loadThreads->add(LoadOperation::create(request, vsg::observer_ptr<DynamicLoadAndCompile>(this)));
-    }
-
-    void compileRequest(vsg::ref_ptr<Request> request)
-    {
-        compileThreads->add(CompileOperation::create(request, vsg::observer_ptr<DynamicLoadAndCompile>(this)));
-    }
-
-    void mergeRequest(vsg::ref_ptr<Request> request)
-    {
-        mergeQueue->add(MergeOperation::create(request, vsg::observer_ptr<DynamicLoadAndCompile>(this)));
-    }
-
-    vsg::ref_ptr<vsg::CompileTraversal> takeCompileTraversal()
-    {
+        vsg::ref_ptr<vsg::Viewer> ref_viewer = viewer;
+        if (ref_viewer)
         {
-            std::scoped_lock lock(mutex_compileTraversals);
-            if (!compileTraversals.empty())
-            {
-                auto ct = compileTraversals.front();
-                compileTraversals.erase(compileTraversals.begin());
-                std::cout << "takeCompileTraversal() resuming " << ct << std::endl;
-                return ct;
-            }
+            updateViewer(*ref_viewer, compileResult);
         }
 
-        std::cout << "takeCompileTraversal() creating a new CompileTraversal" << std::endl;
-        auto ct = vsg::CompileTraversal::create(window, viewport, resourceRequirements);
-
-        return ct;
-    }
-
-    void addCompileTraversal(vsg::ref_ptr<vsg::CompileTraversal> ct)
-    {
-        std::cout << "addCompileTraversal(" << ct << ")" << std::endl;
-        std::scoped_lock lock(mutex_compileTraversals);
-        compileTraversals.push_back(ct);
-    }
-
-    void merge()
-    {
-        vsg::ref_ptr<vsg::Operation> operation;
-        while (operation = mergeQueue->take())
-        {
-            operation->run();
-        }
+        attachmentPoint->addChild(node);
     }
 };
 
-void DynamicLoadAndCompile::LoadOperation::run()
+struct LoadOperation : public vsg::Inherit<vsg::Operation, LoadOperation>
 {
-    vsg::ref_ptr<DynamicLoadAndCompile> dynamicLoadAndCompile(dlac);
-    if (!dynamicLoadAndCompile) return;
+    LoadOperation(vsg::ref_ptr<vsg::Viewer> in_viewer, vsg::ref_ptr<vsg::Group> in_attachmentPoint, const vsg::Path& in_filename, vsg::ref_ptr<vsg::Options> in_options) :
+        viewer(in_viewer),
+        attachmentPoint(in_attachmentPoint),
+        filename(in_filename),
+        options(in_options) {}
 
-    std::cout << "Loading " << request->filename << std::endl;
+    vsg::observer_ptr<vsg::Viewer> viewer;
+    vsg::ref_ptr<vsg::Group> attachmentPoint;
+    vsg::Path filename;
+    vsg::ref_ptr<vsg::Options> options;
 
-    if (auto node = vsg::read_cast<vsg::Node>(request->filename, request->options); node)
+    void run() override
     {
-        vsg::ComputeBounds computeBounds;
-        node->accept(computeBounds);
+        vsg::ref_ptr<vsg::Viewer > ref_viewer = viewer;
 
-        vsg::dvec3 centre = (computeBounds.bounds.min + computeBounds.bounds.max) * 0.5;
-        double radius = vsg::length(computeBounds.bounds.max - computeBounds.bounds.min) * 0.5;
-        auto scale = vsg::MatrixTransform::create(vsg::scale(1.0 / radius, 1.0 / radius, 1.0 / radius) * vsg::translate(-centre));
+        // std::cout << "Loading " << filename << std::endl;
+        if (auto node = vsg::read_cast<vsg::Node>(filename, options))
+        {
+            // std::cout << "Loaded " << filename << std::endl;
 
-        scale->addChild(node);
+            vsg::ComputeBounds computeBounds;
+            node->accept(computeBounds);
 
-        request->loaded = scale;
+            vsg::dvec3 centre = (computeBounds.bounds.min + computeBounds.bounds.max) * 0.5;
+            double radius = vsg::length(computeBounds.bounds.max - computeBounds.bounds.min) * 0.5;
+            auto scale = vsg::MatrixTransform::create(vsg::scale(1.0 / radius, 1.0 / radius, 1.0 / radius) * vsg::translate(-centre));
 
-        std::cout << "Loaded " << request->filename << std::endl;
+            scale->addChild(node);
 
-        dynamicLoadAndCompile->compileRequest(request);
+            auto result = ref_viewer->compileManager->compile(node);
+            if (result) ref_viewer->addUpdateOperation(Merge::create(filename, viewer, attachmentPoint, scale, result));
+        }
     }
-}
-
-void DynamicLoadAndCompile::CompileOperation::run()
-{
-    vsg::ref_ptr<DynamicLoadAndCompile> dynamicLoadAndCompile(dlac);
-    if (!dynamicLoadAndCompile) return;
-
-    if (request->loaded)
-    {
-        std::cout << "Compiling " << request->filename << std::endl;
-
-        auto compileTraversal = dynamicLoadAndCompile->takeCompileTraversal();
-
-        vsg::CollectResourceRequirements collectRequirements;
-        request->loaded->accept(collectRequirements);
-
-        auto maxSets = collectRequirements.requirements.computeNumDescriptorSets();
-        auto descriptorPoolSizes = collectRequirements.requirements.computeDescriptorPoolSizes();
-
-        // brute force allocation of new DescrptorPool for this subgraph, TODO : need to preallocate large DescritorPoil for multiple loaded subgraphs
-        if (descriptorPoolSizes.size() > 0) compileTraversal->context.descriptorPool = vsg::DescriptorPool::create(compileTraversal->context.device, maxSets, descriptorPoolSizes);
-
-        request->loaded->accept(*compileTraversal);
-
-        std::cout << "Finished compile traversal " << request->filename << std::endl;
-
-        compileTraversal->context.record(); // records and submits to queue
-
-        compileTraversal->context.waitForCompletion();
-
-        std::cout << "Finished waiting for compile " << request->filename << std::endl;
-
-        dynamicLoadAndCompile->mergeRequest(request);
-
-        dynamicLoadAndCompile->addCompileTraversal(compileTraversal);
-    }
-}
-
-void DynamicLoadAndCompile::MergeOperation::run()
-{
-    std::cout << "Merging " << request->filename << std::endl;
-
-    request->attachmentPoint->addChild(request->loaded);
-}
+};
 
 int main(int argc, char** argv)
 {
@@ -215,6 +84,8 @@ int main(int argc, char** argv)
 
         // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO related options to use when reading and writing files.
         auto options = vsg::Options::create();
+        options->sharedObjects = vsg::SharedObjects::create();
+        options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
         options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
 
 #ifdef vsgXchange_all
@@ -233,6 +104,7 @@ int main(int argc, char** argv)
         arguments.read("--screen", windowTraits->screenNum);
         arguments.read("--display", windowTraits->display);
         auto numFrames = arguments.value(-1, "-f");
+        auto numThreads = arguments.value(16, "-n");
 
         // provide setting of the resource hints on the command line
         vsg::ref_ptr<vsg::ResourceHints> resourceHints;
@@ -249,18 +121,13 @@ int main(int argc, char** argv)
         // create a Group to contain all the nodes
         auto vsg_scene = vsg::Group::create();
 
-        // Assign any ResourceHints so that the Compile traversal can allocate sufficient DescriptorPool resources for the needs of loading all possible models.
-        if (resourceHints)
-        {
-            vsg_scene->setObject("ResourceHints", resourceHints);
-        }
-
         vsg::ref_ptr<vsg::Window> window(vsg::Window::create(windowTraits));
         if (!window)
         {
             std::cout << "Could not create windows." << std::endl;
             return 1;
         }
+
 
         // create the viewer and assign window(s) to it
         auto viewer = vsg::Viewer::create();
@@ -295,11 +162,21 @@ int main(int argc, char** argv)
         auto commandGraph = vsg::createCommandGraphForView(window, camera, vsg_scene);
         viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
 
-        // create the DynamicLoadAndCompile object that manages loading, compile and merging of new objects.
-        // Pass in window and viewportState to help initialize CompilTraversals
-        auto dynamicLoadAndCompile = DynamicLoadAndCompile::create(window, viewportState, viewer->status);
+        if (!resourceHints)
+        {
+            // To help reduce the number of vsg::DescriptorPool that need to be allocated we'll provide a minimum requirement via ResourceHints.
+            resourceHints = vsg::ResourceHints::create();
+            resourceHints->numDescriptorSets = 256;
+            resourceHints->descriptorPoolSizes.push_back(VkDescriptorPoolSize{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 256});
+        }
 
-        // build the scene graph attachments points to place all of the loaded models at.
+        // configure the viewers rendering backend, initialize and compile Vulkan objects, passing in ResourceHints to guide the resources allocated.
+        viewer->compile(resourceHints);
+
+        auto loadThreads = vsg::OperationThreads::create(numThreads, viewer->status);
+
+        // assign the LoadOperation that will do the load in the background and once loaded and compiled merged then via Merge operation that is assigned to updateOperations and called from viewer.udpate()
+        vsg::observer_ptr<vsg::Viewer> observer_viewer(viewer);
         for (int i = 1; i < argc; ++i)
         {
             int index = i - 1;
@@ -308,22 +185,23 @@ int main(int argc, char** argv)
 
             vsg_scene->addChild(transform);
 
-            dynamicLoadAndCompile->loadRequest(argv[i], transform, options);
+            loadThreads->add(LoadOperation::create(observer_viewer, transform, argv[i], options));
         }
 
         // rendering main loop
         while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
         {
+            // std::cout<<"new Frame"<<std::endl;
             // pass any events into EventHandlers assigned to the Viewer
             viewer->handleEvents();
-
-            dynamicLoadAndCompile->merge();
 
             viewer->update();
 
             viewer->recordAndSubmit();
 
             viewer->present();
+
+            // if (loadThreads->queue->empty()) break;
         }
     }
     catch (const vsg::Exception& ve)

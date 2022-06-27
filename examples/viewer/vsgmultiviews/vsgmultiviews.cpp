@@ -116,7 +116,7 @@ int main(int argc, char** argv)
     }
     else
     {
-        std::cout << "Using a single RenderGraph, with both Views separated by a ClearAttachemnts" << std::endl;
+        std::cout << "Using a single RenderGraph, with both Views separated by a ClearAttachments" << std::endl;
         auto renderGraph = vsg::RenderGraph::create(window);
 
         renderGraph->addChild(main_view);
@@ -128,7 +128,7 @@ int main(int argc, char** argv)
         VkClearAttachment color_attachment{VK_IMAGE_ASPECT_COLOR_BIT, 0, colorClearValue};
 
         VkClearValue depthClearValue{};
-        depthClearValue.depthStencil = {1.0f, 0};
+        depthClearValue.depthStencil = {0.0f, 0};
         VkClearAttachment depth_attachment{VK_IMAGE_ASPECT_DEPTH_BIT, 1, depthClearValue};
 
         VkClearRect rect{secondary_camera->getRenderArea(), 0, 1};

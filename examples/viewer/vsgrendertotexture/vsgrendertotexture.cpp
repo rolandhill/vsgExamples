@@ -118,8 +118,8 @@ vsg::ref_ptr<vsg::RenderGraph> createOffscreenRendergraph(vsg::Context& context,
     attachments[1].initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference colorReference = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-    VkAttachmentReference depthReference = {1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+    vsg::AttachmentReference colorReference = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    vsg::AttachmentReference depthReference = {1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
     vsg::RenderPass::Subpasses subpassDescription(1);
     subpassDescription[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpassDescription[0].colorAttachments.emplace_back(colorReference);
@@ -163,7 +163,7 @@ vsg::ref_ptr<vsg::RenderGraph> createOffscreenRendergraph(vsg::Context& context,
 
     rendergraph->clearValues.resize(2);
     rendergraph->clearValues[0].color = {{0.4f, 0.2f, 0.4f, 1.0f}};
-    rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{1.0f, 0};
+    rendergraph->clearValues[1].depthStencil = VkClearDepthStencilValue{0.0f, 0};
 
     return rendergraph;
 }
@@ -388,18 +388,14 @@ int main(int argc, char** argv)
 
     viewer->addWindow(window);
 
-    // for convenience create a compile context for creating our
-    // storage image
-    // XXX How to put ImageInfo in the scene graph and compile it
-    // during a compile traversal? Should RenderGraph support compile()?
-    vsg::CompileTraversal compile(window);
+    auto context = vsg::Context::create(window->getOrCreateDevice());
 
     // Framebuffer with attachments
     VkExtent2D targetExtent{512, 512};
     auto offscreenCamera = createCameraForScene(vsg_scene, targetExtent);
     auto colorImage = vsg::ImageInfo::create();
     auto depthImage = vsg::ImageInfo::create();
-    auto rtt_RenderGraph = createOffscreenRendergraph(compile.context, targetExtent, *colorImage, *depthImage);
+    auto rtt_RenderGraph = createOffscreenRendergraph(*context, targetExtent, *colorImage, *depthImage);
     auto rtt_view = vsg::View::create(offscreenCamera, vsg_scene);
     rtt_RenderGraph->addChild(rtt_view);
 
