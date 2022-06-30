@@ -21,7 +21,7 @@ int main(int argc, char** argv)
     if (debugLayer)
     {
         instanceExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        requestedLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+        requestedLayers.push_back("VK_LAYER_KHRONOS_validation");
         if (apiDumpLayer) requestedLayers.push_back("VK_LAYER_LUNARG_api_dump");
     }
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     auto compileTraversal = vsg::CompileTraversal::create(device);
     auto context = compileTraversal->contexts.front();
     context->commandPool = vsg::CommandPool::create(device, computeQueueFamily);
-    context->descriptorPool = vsg::DescriptorPool::create(device, 1, vsg::DescriptorPoolSizes{{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}});
+    // context->descriptorPool = vsg::DescriptorPool::create(device, 1, vsg::DescriptorPoolSizes{{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1}});
 
     commandGraph->accept(*compileTraversal);
 
@@ -96,7 +96,7 @@ int main(int argc, char** argv)
     auto startTime = std::chrono::steady_clock::now();
 
     // submit commands
-    vsg::submitCommandsToQueue(device, context->commandPool, fence, 100000000000, computeQueue, [&](vsg::CommandBuffer& commandBuffer) {
+    vsg::submitCommandsToQueue(context->commandPool, fence, 100000000000, computeQueue, [&](vsg::CommandBuffer& commandBuffer) {
         commandGraph->record(commandBuffer);
     });
 

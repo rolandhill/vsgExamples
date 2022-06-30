@@ -175,6 +175,7 @@ int main(int argc, char** argv)
 
         // set up vsg::Options to pass in filepaths and ReaderWriter's and other IO related options to use when reading and writing files.
         auto options = vsg::Options::create();
+        options->sharedObjects = vsg::SharedObjects::create();
         options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
         options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
 
@@ -221,6 +222,8 @@ int main(int argc, char** argv)
         auto horizonMountainHeight = arguments.value(0.0, "--hmh");
         auto mipmapLevelsHint = arguments.value<uint32_t>(0, {"--mipmapLevels", "--mml"});
         if (arguments.read("--rgb")) options->mapRGBtoRGBAHint = false;
+
+        if (int log_level = 0; arguments.read("--log-level", log_level)) vsg::Logger::instance()->level = vsg::Logger::Level(log_level);
 
         if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
