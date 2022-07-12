@@ -117,7 +117,7 @@ public:
             targetImageFormat = VK_FORMAT_R8G8B8A8_UNORM;
         }
 
-        //std::cout<<"supportsBlit = "<<supportsBlit<<std::endl;
+        vsg::info("supportsBlit = ", supportsBlit);
 
         //
         // 2) create image to write to
@@ -148,6 +148,7 @@ public:
 
         if (event)
         {
+            vsg::info("Using vsg::Event/vkEvent");
             commands->addChild(vsg::WaitEvents::create(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, event));
             commands->addChild(vsg::ResetEvent::create(event, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT));
         }
@@ -193,11 +194,11 @@ public:
             region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             region.srcSubresource.layerCount = 1;
             region.srcOffsets[0] = VkOffset3D{0, 0, 0};
-            region.srcOffsets[1] = VkOffset3D{static_cast<int32_t>(width), static_cast<int32_t>(height), 0};
+            region.srcOffsets[1] = VkOffset3D{static_cast<int32_t>(width), static_cast<int32_t>(height), 1};
             region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             region.dstSubresource.layerCount = 1;
             region.dstOffsets[0] = VkOffset3D{0, 0, 0};
-            region.dstOffsets[1] = VkOffset3D{static_cast<int32_t>(width), static_cast<int32_t>(height), 0};
+            region.dstOffsets[1] = VkOffset3D{static_cast<int32_t>(width), static_cast<int32_t>(height), 1};
 
             auto blitImage = vsg::BlitImage::create();
             blitImage->srcImage = sourceImage;
@@ -452,15 +453,19 @@ public:
             std::cout << "num_unset_depth = " << num_unset_depth << std::endl;
             std::cout << "num_set_depth = " << num_set_depth << std::endl;
 
-            vsg::write(imageData, depthFilename, options);
-            std::cout<<"Written depth buffer to "<<depthFilename<<std::endl;
+            if (vsg::write(imageData, depthFilename, options))
+            {
+                std::cout<<"Written depth buffer to "<<depthFilename<<std::endl;
+            }
         }
         else
         {
             auto imageData = vsg::MappedData<vsg::uintArray2D>::create(destinationMemory, 0, 0, vsg::Data::Layout{targetImageFormat}, width, height); // deviceMemory, offset, flags and dimensions
 
-            vsg::write(imageData, depthFilename);
-            std::cout<<"Written depth buffer to "<<depthFilename<<std::endl;
+            if (vsg::write(imageData, depthFilename))
+            {
+                std::cout<<"Written depth buffer to "<<depthFilename<<std::endl;
+            }
         }
     }
 };
@@ -471,6 +476,14 @@ int main(int argc, char** argv)
 {
     // set up defaults and read command line arguments to override them
     auto options = vsg::Options::create();
+    options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
+    options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
+
+#ifdef vsgXchange_all
+    // add vsgXchange's support for reading and writing 3rd party file formats
+    options->add(vsgXchange::all::create());
+#endif
+
     auto windowTraits = vsg::WindowTraits::create();
     windowTraits->windowTitle = "vsgscreenshot";
 
@@ -480,6 +493,7 @@ int main(int argc, char** argv)
 
     // set up defaults and read command line arguments to override them
     vsg::CommandLine arguments(&argc, argv);
+    arguments.read(options);
     windowTraits->debugLayer = arguments.read({"--debug", "-d"});
     windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
     arguments.read("--screen", windowTraits->screenNum);
@@ -487,6 +501,7 @@ int main(int argc, char** argv)
     arguments.read("--samples", windowTraits->samples);
     auto colorFilename = arguments.value<vsg::Path>("screenshot.vsgt", {"--color-file", "--cf"});
     auto depthFilename = arguments.value<vsg::Path>("depth.vsgt", {"--depth-file", "--df"});
+    auto use_vkEvent = arguments.read("--use-vkEvent");
     if (arguments.read("--msaa")) windowTraits->samples = VK_SAMPLE_COUNT_8_BIT;
     if (arguments.read("--IMMEDIATE")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
     if (arguments.read("--FIFO")) windowTraits->swapchainPreferences.presentMode = VK_PRESENT_MODE_FIFO_KHR;
@@ -512,18 +527,16 @@ int main(int argc, char** argv)
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
-#ifdef vsgXchange_all
-    // add vsgXchange's support for reading and writing 3rd party file formats
-    options->add(vsgXchange::all::create());
-#endif
+    auto vsg_scene = vsg::Group::create();
+    for (int i = 1; i < argc; ++i)
+    {
+        if (auto node = vsg::read_cast<vsg::Node>(arguments[i], options))
+        {
+            vsg_scene->addChild(node);
+        }
+    }
 
-    vsg::Path filename;
-    if (argc > 1) filename = arguments[1];
-    options->fileCache = vsg::getEnv("VSG_FILE_CACHE");
-    options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
-
-    auto vsg_scene = vsg::read_cast<vsg::Node>(filename, options);
-    if (!vsg_scene)
+    if (vsg_scene->children.empty())
     {
         std::cout << "Please specify a 3d model file on the command line." << std::endl;
         return 1;
@@ -555,8 +568,6 @@ int main(int argc, char** argv)
     std::cout << "depthStencilResolve_properites.independentResolveNone = " << depthStencilResolve_properites.independentResolveNone << std::endl;
     std::cout << "depthStencilResolve_properites.independentResolve = " << depthStencilResolve_properites.independentResolve << std::endl;
 
-
-
     // compute the bounds of the scene graph to help position camera
     vsg::ComputeBounds computeBounds;
     vsg_scene->accept(computeBounds);
@@ -584,7 +595,7 @@ int main(int argc, char** argv)
 
     viewer->addEventHandler(vsg::Trackball::create(camera));
 
-    auto event = vsg::Event::create(window->getOrCreateDevice()); // Vulkan creates vkEvent in an unsignalled state
+    auto event = vsg::Event::create_if(use_vkEvent, window->getOrCreateDevice()); // Vulkan creates vkEvent in an unsignalled state
 
     // Add ScreenshotHandler to respond to keyboard and mouse events.
     auto screenshotHandler = ScreenshotHandler::create(event, colorFilename, depthFilename, options);
