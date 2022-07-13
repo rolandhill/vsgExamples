@@ -169,6 +169,7 @@ int main(int argc, char** argv)
     traits->apiDumpLayer = arguments.read({"--api", "-a"});
     if (arguments.read({"--window", "-w"}, traits->width, traits->height)) { traits->fullscreen = false; }
     if (arguments.read({"-t", "--test"})) { traits->swapchainPreferences.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; }
+    bool overlay = arguments.read({"-o", "--overlay"});
     bool multiThreading = arguments.read("--mt");
     bool useExecuteCommands = !arguments.read("--no-ec"); // by default use ExecuteCommands, but allow it to be disabled using --no-ec
     auto numFrames = arguments.value(-1, "-f");
@@ -227,10 +228,24 @@ int main(int argc, char** argv)
 
     auto camera = vsg::Camera::create(perspective, lookAt, vsg::ViewportState::create(0, 0, traits->width, traits->height));
 
+    if (overlay)
+    {
+        // duplicate the scene to provoke timing issues
+        auto new_scene = vsg::Group::create();
+        for (int i=0; i<100; ++i)
+            new_scene->addChild(vsg_scene);
+        vsg_scene = new_scene;
+    }
+
     if (useExecuteCommands)
     {
         std::cout << "Using Secondary CommandGraph and ExecuteCommands" << std::endl;
         auto seccommandGraph1 = vsg::createSecondaryCommandGraphForView(window1, camera, vsg_scene, 0);
+
+        auto clear = vsg::ClearAttachments::create();
+        clear->attachments = {{VK_IMAGE_ASPECT_COLOR_BIT, 0, {VkClearColorValue{{0.f,0.f,0.f,1.f}}}}};
+        clear->rects = {{VkRect2D{{0,0},{traits->width/2, traits->height}}, 0, 1}};
+        auto overlayGraph = vsg::createSecondaryCommandGraphForView(window1, camera, clear, 0);
 
         auto scenegraphwin1 = vsg::Group::create();
         auto pass1 = vsg::ExecuteCommands::create();
@@ -240,13 +255,20 @@ int main(int argc, char** argv)
         auto pass2 = vsg::ExecuteCommands::create();
         pass2->connect(seccommandGraph1);
 
+        if (overlay)
+        {
+            // draw an overlay on top of the scene to test that command graphs are executed in connected order
+            pass1->connect(overlayGraph);
+            pass2->connect(overlayGraph);
+        }
+
         scenegraphwin1->addChild(pass1);
         scenegraphwin2->addChild(pass2);
 
         auto commandGraphwin1 = vsg::createCommandGraphForView(window1, camera, scenegraphwin1, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
         auto commandGraphwin2 = vsg::createCommandGraphForView(window2, camera, scenegraphwin2, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-        viewer->assignRecordAndSubmitTaskAndPresentation({seccommandGraph1, commandGraphwin1, commandGraphwin2});
+        viewer->assignRecordAndSubmitTaskAndPresentation({overlayGraph, seccommandGraph1, commandGraphwin1, commandGraphwin2});
     }
     else
     {
