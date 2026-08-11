@@ -27,6 +27,8 @@ int main(int argc, char** argv)
 {
     vsg::CommandLine arguments(&argc, argv);
 
+    if (arguments.read("--args")) std::cout << arguments << std::endl;
+
     bool debugLayer = true;
     auto apiDumpLayer = arguments.read({"--api", "-a"});
 
