@@ -310,17 +310,12 @@ int main(int argc, char** argv)
     // set up defaults and read command line arguments to override them
     vsg::CommandLine arguments(&argc, argv);
 
-    auto windowTraits = vsg::WindowTraits::create();
-    windowTraits->windowTitle = "render-with-outline";
-    windowTraits->debugLayer = arguments.read({"--debug", "-d"});
-    windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
-    windowTraits->synchronizationLayer = arguments.read("--sync");
-    if (arguments.read("--msaa")) windowTraits->samples = VK_SAMPLE_COUNT_8_BIT;
-    if (arguments.read({"--window", "-w"}, windowTraits->width, windowTraits->height)) { windowTraits->fullscreen = false; }
+    auto windowTraits = vsg::WindowTraits::create(arguments);
 
     bool nestedCommandGraph = arguments.read({"-n", "--nested"});
     bool separateCommandGraph = arguments.read("-s");
     bool multiThreading = arguments.read("--mt");
+    auto numFrames = arguments.value(-1, "-f");
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
@@ -467,7 +462,7 @@ int main(int argc, char** argv)
 
     // rendering main loop
     string last_matrix;
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();
