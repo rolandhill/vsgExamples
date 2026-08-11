@@ -228,7 +228,6 @@ int main(int argc, char** argv)
 
         auto sceneGraph = createScene(numPipelines, numDrawCalls, numTriangles);
 
-
         auto window = vsg::Window::create(windowTraits);
         if (!window)
         {
