@@ -221,7 +221,8 @@ namespace
 int main(int argc, char** argv)
 {
     vsg::CommandLine arguments(&argc, argv);
-    if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
+
+    auto numFrames = arguments.value(-1, "-f");
 
     if (arguments.read("--help") || arguments.read("-h"))
     {
@@ -236,6 +237,8 @@ int main(int argc, char** argv)
                   << std::endl;
         return 0;
     }
+
+    if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
     auto options = vsg::Options::create();
     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
@@ -299,7 +302,7 @@ int main(int argc, char** argv)
     viewer->addEventHandler(vsg::Trackball::create(camera));
     viewer->addEventHandler(IntersectionHandler::create(camera, scene, viewer));
 
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         viewer->handleEvents();
         viewer->update();

@@ -8,6 +8,8 @@ int main(int argc, char** argv)
 
     auto windowTraits = vsg::WindowTraits::create(arguments);
 
+    auto numFrames = arguments.value(-1, "-f");
+
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
     // set up search paths to SPIRV shaders and textures
@@ -159,7 +161,7 @@ int main(int argc, char** argv)
     viewer->addEventHandlers({vsg::CloseHandler::create(viewer)});
 
     // main frame loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();

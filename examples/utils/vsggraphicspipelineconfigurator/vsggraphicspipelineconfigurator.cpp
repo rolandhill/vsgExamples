@@ -12,6 +12,8 @@ int main(int argc, char** argv)
 
     auto windowTraits = vsg::WindowTraits::create(arguments);
 
+    auto numFrames = arguments.value(-1, "-f");
+
     auto options = vsg::Options::create();
     options->paths = vsg::getEnvPaths("VSG_FILE_PATH");
     options->sharedObjects = vsg::SharedObjects::create();
@@ -262,7 +264,7 @@ int main(int argc, char** argv)
     viewer->addEventHandler(vsg::Trackball::create(camera));
 
     // main frame loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();

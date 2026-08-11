@@ -78,6 +78,8 @@ int main(int argc, char** argv)
     options->add(vsgXchange::all::create());
 #endif
 
+    auto numFrames = arguments.value(-1, "-f");
+
     auto pointOfInterest = arguments.value(vsg::dvec3(0.0, 0.0, std::numeric_limits<double>::max()), "--poi");
     auto horizonMountainHeight = arguments.value(0.0, "--hmh");
 
@@ -212,7 +214,7 @@ int main(int argc, char** argv)
     viewerData->lookAt = lookAt;
 
     // rendering main loop
-    while (viewer->advanceToNextFrame() && (!viewerData || viewerData->alive))
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0) && (!viewerData || viewerData->alive))
     {
         if (bc)
         {

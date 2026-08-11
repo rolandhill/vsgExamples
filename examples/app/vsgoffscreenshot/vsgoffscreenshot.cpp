@@ -554,11 +554,13 @@ int main(int argc, char** argv)
 
     auto windowTraits = vsg::WindowTraits::create(arguments);
 
+    auto numFrames = arguments.value(-1, "-f");
+
     bool nestedCommandGraph = arguments.read({"-n", "--nested"});
     bool separateCommandGraph = arguments.read("-s");
 
     // offscreen capture filename and multi sampling parameters
-    auto captureFilename = arguments.value<vsg::Path>("screenshot.vsgt", {"--capture-file", "-f"});
+    auto captureFilename = arguments.value<vsg::Path>("screenshot.vsgt", {"--capture-file", "--cf"});
     bool msaa = arguments.read("--msaa");
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
@@ -732,7 +734,7 @@ int main(int argc, char** argv)
     offscreenSwitch->setAllChildren(offscreenEnabled);
 
     // rendering main loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         viewer->handleEvents();
 

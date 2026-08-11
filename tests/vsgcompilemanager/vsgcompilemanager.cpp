@@ -108,15 +108,13 @@ vsg::ref_ptr<vsg::StateGroup> createScene1()
 
 int main(int argc, char** argv)
 {
-    auto windowTraits = vsg::WindowTraits::create();
-    windowTraits->windowTitle = "vsgcompilemanager";
+    vsg::CommandLine arguments(&argc, argv);
+    auto windowTraits = vsg::WindowTraits::create(arguments);
+
+    auto numFrames = arguments.value(-1, "-f");
+
     auto requestFeatures = windowTraits->deviceFeatures = vsg::DeviceFeatures::create();
     requestFeatures->get().geometryShader = VK_TRUE; // for gl_PrimitiveID
-
-    // set up defaults and read command line arguments to override them
-    vsg::CommandLine arguments(&argc, argv);
-    windowTraits->debugLayer = arguments.read({"--debug", "-d"});
-    windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
 
     auto window = vsg::Window::create(windowTraits);
     auto lookAt = vsg::LookAt::create(
@@ -142,7 +140,7 @@ int main(int argc, char** argv)
 
     int sceneNumber{0};
     int frameCount{0};
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         if ((++frameCount % 60) == 0)
         {

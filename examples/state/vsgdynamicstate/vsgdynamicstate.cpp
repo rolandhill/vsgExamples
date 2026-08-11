@@ -44,6 +44,8 @@ int main(int argc, char** argv)
     options->add(vsgXchange::all::create());
 #endif
 
+    auto numFrames = arguments.value(-1, "-f");
+
     // enable wireframe and line width setting.
     auto deviceFeatures = vsg::DeviceFeatures::create();
     deviceFeatures->get().fillModeNonSolid = VK_TRUE;
@@ -316,7 +318,7 @@ int main(int argc, char** argv)
     viewer->compile();
 
     // main frame loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();

@@ -320,6 +320,7 @@ int main(int argc, char** argv)
     auto event_output_filename = arguments.value(std::string(""), "-o");
     auto font_filename = arguments.value(std::string("fonts/times.vsgb"), "--font");
     bool printToConsole = arguments.read("--print");
+    auto numFrames = arguments.value(-1, "-f");
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
@@ -523,7 +524,7 @@ int main(int argc, char** argv)
     viewer->addEventHandler(InputHandler::create(keyboard_text, pointer_text, scroll_text, window_text, frame_text, printToConsole));
 
     // main frame loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         if (playEvents)
         {
