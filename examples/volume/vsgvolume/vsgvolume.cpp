@@ -205,6 +205,8 @@ int main(int argc, char** argv)
     options->add(vsgXchange::all::create());
 #endif
 
+    auto numFrames = arguments.value(-1, "-f");
+
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
     // load shaders
@@ -331,7 +333,7 @@ int main(int argc, char** argv)
     viewer->addEventHandler(vsg::Trackball::create(camera));
 
     // main frame loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();

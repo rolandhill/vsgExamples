@@ -217,20 +217,18 @@ int main(int argc, char** argv)
     {
         vsg::CommandLine arguments(&argc, argv);
 
+        auto windowTraits = vsg::WindowTraits::create(arguments);
+
         if (int log_level = 0; arguments.read("--log-level", log_level)) vsg::Logger::instance()->level = vsg::Logger::Level(log_level);
 
         auto numPipelines = arguments.value(1u, {"--numPipelines", "-p"});
         auto numDrawCalls = arguments.value(1u, {"--numDrawCalls", "-c"});
         auto numTriangles = arguments.value(vsg::uivec3{10, 10, 10}, {"--numTriangles", "-n"});
+        auto numFrames = arguments.value(-1, "-f");
 
         auto sceneGraph = createScene(numPipelines, numDrawCalls, numTriangles);
 
-        /// Window
-        auto windowTraits = vsg::WindowTraits::create();
-        windowTraits->debugLayer = arguments.read({"--debug", "-d"});
-        windowTraits->apiDumpLayer = arguments.read({"--api", "-a"});
-        windowTraits->windowTitle = "triangles";
-        windowTraits->samples = VK_SAMPLE_COUNT_4_BIT;
+
         auto window = vsg::Window::create(windowTraits);
         if (!window)
         {
@@ -277,7 +275,7 @@ int main(int argc, char** argv)
         view->addChild(sceneGraph);
         viewer->compile();
 
-        while (viewer->advanceToNextFrame())
+        while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
         {
             viewer->handleEvents();
             viewer->update();
