@@ -24,6 +24,8 @@ int main(int argc, char** argv)
 
     auto windowTraits = vsg::WindowTraits::create(arguments);
 
+    auto numFrames = arguments.value(-1, "-f");
+
     auto vertexShader = vsg::ShaderStage::create(VK_SHADER_STAGE_VERTEX_BIT, "main", VERT);
     auto fragmentShader = vsg::ShaderStage::create(VK_SHADER_STAGE_FRAGMENT_BIT, "main", FRAG);
     auto shaderSet = vsg::ShaderSet::create(vsg::ShaderStages{vertexShader, fragmentShader});
@@ -90,7 +92,7 @@ int main(int argc, char** argv)
     viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
     viewer->compile();
 
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         viewer->handleEvents();
         viewer->update();

@@ -265,6 +265,7 @@ int main(int argc, char** argv)
     auto pointOfInterest = arguments.value(vsg::dvec3(0.0, 0.0, std::numeric_limits<double>::max()), "--poi");
     auto horizonMountainHeight = arguments.value(0.0, "--hmh");
     vsg::Path textureFile = arguments.value<std::string>("", "-t");
+    auto numFrames = arguments.value(-1, "-f");
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
@@ -385,7 +386,7 @@ int main(int argc, char** argv)
     viewer->compile();
 
     // rendering main loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();
