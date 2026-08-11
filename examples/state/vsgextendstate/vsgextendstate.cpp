@@ -67,6 +67,8 @@ int main(int argc, char** argv)
         /// enable wideLines feature
         requestFeatures->get().wideLines = VK_TRUE;
 
+        auto numFrames = arguments.value(-1, "-f");
+
         // create window now we have configured the windowTraits to set up the required features
         auto window = vsg::Window::create(windowTraits);
         if (!window)
@@ -161,7 +163,7 @@ int main(int argc, char** argv)
         viewer->assignRecordAndSubmitTaskAndPresentation({commandGraph});
         viewer->compile();
 
-        while (viewer->advanceToNextFrame())
+        while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
         {
             viewer->handleEvents();
             viewer->update();

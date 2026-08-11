@@ -151,7 +151,7 @@ int main(int argc, char** argv)
     bool update = arguments.read("--update");
     int numRows = arguments.value(4, "--rows");
     int numColumns = arguments.value(4, "--cols");
-    ;
+    auto numFrames = arguments.value(-1, "-f");
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
@@ -385,7 +385,7 @@ int main(int argc, char** argv)
     vsg::Context context(window->getOrCreateDevice());
 
     // main frame loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();
