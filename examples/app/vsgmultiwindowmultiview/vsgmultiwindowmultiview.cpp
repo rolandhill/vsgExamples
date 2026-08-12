@@ -153,11 +153,11 @@ std::tuple<vsg::ref_ptr<vsg::CommandGraph>, vsg::ref_ptr<vsg::Window>> createWin
     trackball->addWindow(newWindow);
     viewer->addEventHandler(trackball);
 
-    // Add to viewer's compile manager
-    viewer->compileManager->add(*newWindow, view);
-
     // Add the command graph to viewer
     viewer->addRecordAndSubmitTaskAndPresentation({commandGraph});
+
+    // Add to viewer's compile manager
+    viewer->compileManager->add(*newWindow, view);
 
     return {commandGraph, newWindow};
 }
@@ -199,7 +199,6 @@ int main(int argc, char** argv)
 
         // Create the viewer
         auto viewer = vsg::Viewer::create();
-        viewer->compileManager = vsg::CompileManager::create(*viewer, vsg::ResourceHints::create());
 
         // List to track windows that need to be removed
         std::vector<vsg::ref_ptr<vsg::Window>> windowsToRemove;

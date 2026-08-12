@@ -104,7 +104,8 @@ int main(int argc, char** argv)
 
         descriptorImage1->compile(*context);
         descriptorImage2->compile(*context);
-        context->record();
+
+        if (context->record()) context->waitForCompletion();
 
         vsg::info("End of test 1\n");
     }
