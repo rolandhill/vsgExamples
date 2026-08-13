@@ -4,27 +4,7 @@
 #    include <vsgXchange/all.h>
 #endif
 
-#include <algorithm>
-#include <chrono>
 #include <iostream>
-#include <thread>
-#include <atomic>
-#include <future>
-
-// Async terminal input checker
-std::atomic<bool> shouldExit{false};
-
-void checkTerminalInput() {
-    char input;
-    while (!shouldExit.load()) {
-        if (std::cin.get(input)) {
-            if (input == 'q' || input == 'Q') {
-                shouldExit.store(true);
-                break;
-            }
-        }
-    }
-}
 
 // Custom close handler that handles window closing without terminating the viewer
 struct WindowCloseHandler : public vsg::Inherit<vsg::Visitor, WindowCloseHandler>
@@ -41,6 +21,16 @@ struct WindowCloseHandler : public vsg::Inherit<vsg::Visitor, WindowCloseHandler
         if (closeWindowEvent.window && windowsToRemove) {
             windowsToRemove->push_back(closeWindowEvent.window);
         }
+    }
+
+    void apply(vsg::KeyPressEvent& keyPress) override
+    {
+        if (keyPress.keyBase == vsg::KEY_Escape) viewer->close();
+    }
+
+    void apply(vsg::TerminateEvent&) override
+    {
+        viewer->close();
     }
 };
 
@@ -164,16 +154,11 @@ std::tuple<vsg::ref_ptr<vsg::CommandGraph>, vsg::ref_ptr<vsg::Window>> createWin
 
 int main(int argc, char** argv)
 {
+    // Set up defaults and read command line arguments
+    vsg::CommandLine arguments(&argc, argv);
+
     try
     {
-        // Start terminal input monitoring thread
-        std::thread inputThread(checkTerminalInput);
-        inputThread.detach();
-        
-        std::cout << "Press 'q' and Enter in the terminal to quit the application" << std::endl;
-
-        // Set up defaults and read command line arguments
-        vsg::CommandLine arguments(&argc, argv);
         auto windowTraits = vsg::WindowTraits::create(arguments);
 
         // Set up options
@@ -247,7 +232,7 @@ int main(int argc, char** argv)
         viewer->compile();
 
         // Main rendering loop
-        while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0) && !shouldExit.load())
+        while (viewer->advanceToNextFrame() && (numFrames < 0 || (numFrames--) > 0))
         {
             auto currentTime = std::chrono::steady_clock::now();
             
@@ -259,7 +244,7 @@ int main(int argc, char** argv)
                 {
                     if (info.window == windowToRemove)
                     {
-                        std::cout << "Removing window for " << info.filename << ", will recreate in 1 second" << std::endl;
+                        std::cout << "Removing window for " << info.filename << ", will recreate in 2 seconds" << std::endl;
                         
                         // Remove from viewer
                         viewer->deviceWaitIdle();
@@ -269,7 +254,7 @@ int main(int argc, char** argv)
                         info.window = nullptr;
                         info.commandGraph = nullptr;
                         info.needsRecreation = true;
-                        info.recreateTime = currentTime + std::chrono::seconds(1);
+                        info.recreateTime = currentTime + std::chrono::seconds(2);
                         break;
                     }
                 }
@@ -301,14 +286,11 @@ int main(int argc, char** argv)
             viewer->recordAndSubmit();
             viewer->present();
         }
-        
-        shouldExit.store(true); // Signal input thread to stop
     }
     catch (const vsg::Exception& ve)
     {
-        for (int i = 0; i < argc; ++i) std::cerr << argv[i] << " ";
+        std::cerr<<arguments<<std::endl;
         std::cerr << "\n[Exception] - " << ve.message << " result = " << ve.result << std::endl;
-        shouldExit.store(true);
         return 1;
     }
 
