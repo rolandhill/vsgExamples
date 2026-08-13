@@ -185,6 +185,8 @@ int main(int argc, char** argv)
         // Create the viewer
         auto viewer = vsg::Viewer::create();
 
+        viewer->compileManager = vsg::CompileManager::create(*viewer, vsg::ResourceHints::create());
+
         // List to track windows that need to be removed
         std::vector<vsg::ref_ptr<vsg::Window>> windowsToRemove;
 
